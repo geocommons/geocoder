@@ -123,13 +123,17 @@ module Geocoder::US
     class Edges < Table
       def fields
         {
-          "tlid" => "INTEGER(10) PRIMARY KEY",
+          "tlid" => "INTEGER(10)",
           "lfromadd" => "INTEGER(6)",     # From House # (left side)
           "ltoadd" => "INTEGER(6)",     # To House #   (left side)
           "rfromadd" => "INTEGER(6)",     # From House # (right side)
           "rtoadd" => "INTEGER(6)",     # To House #   (right side)
           "geometry" => "BLOB"
         }
+      end
+
+      def indexes
+        ["tlid"]
       end
 
       def copy?(data,cache=nil)
