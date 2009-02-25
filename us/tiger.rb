@@ -1,5 +1,7 @@
 require 'rubygems'
 require 'geo_ruby'
+require 'zip/zip'
+require 'tmpdir'
 
 module Geocoder
 end
@@ -26,7 +28,7 @@ module Geocoder::US
       attr :cache
       def initialize (filename, cache=nil)
         cache = Cache.new() if cache.nil?
-        @shp = GeoRuby::Shp4r::ShpFile.open(filename + "_" + suffix)
+        @shp = GeoRuby::Shp4r::ShpFile.open(filename + "_" + self.class.suffix)
         @cache = cache
       end
       def each
@@ -42,7 +44,7 @@ module Geocoder::US
     class Dbf < Shp
       def initialize (filename, cache=nil)
         cache = Cache.new() if cache.nil?
-        filename += "_" + suffix + ".dbf"
+        filename += "_" + self.class.suffix + ".dbf"
         @dbf = GeoRuby::Shp4r::Dbf::Reader.open(filename)
         @cache = cache
       end
@@ -59,13 +61,13 @@ module Geocoder::US
     end
 
     class CurrentPlaces < Dbf
-      def suffix
+      def self.suffix
         "place"
       end    
     end
 
     class AllLines < Shp
-      def suffix
+      def self.suffix
         "edges"
       end
       def add_to_cache(record)
@@ -81,7 +83,7 @@ module Geocoder::US
     end
 
     class AddressRanges < Dbf
-      def suffix
+      def self.suffix
         "addr"
       end
       def add_to_cache(record)
@@ -90,13 +92,13 @@ module Geocoder::US
     end
 
     class FeatureNames < Dbf
-      def suffix
+      def self.suffix
         "featnames"
       end
     end 
 
     class TopoFaces < Dbf
-      def suffix
+      def self.suffix
         "faces"
       end
       def add_to_cache(record)
@@ -110,12 +112,18 @@ module Geocoder::US
         @cache = Cache.new()
       end
       def import (db)
-        puts "importing " + @filename
-        for cls in [TopoFaces, AddressRanges, AllLines, FeatureNames]
-          puts "  loading " + cls.name
-          source = cls.new(@filename, @cache)
-          db.import_all(source)
-        end
+        Dir.mktmpdir {|dir|
+          puts "importing " + @filename
+          for cls in [TopoFaces, AddressRanges, AllLines, FeatureNames]
+            puts "  loading " + cls.name
+            Zip::ZipFile::open("#{@filename}_#{cls.suffix}.zip") { |zf|
+               zf.each {|file| zf.extract(file, File.join(dir, file.name)) }
+            } 
+            extracted = File.join(dir, File.basename(@filename))
+            source = cls.new(extracted, @cache)
+            db.import_all(source)
+          end
+        }
       end
     end
   end
