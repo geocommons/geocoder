@@ -181,8 +181,12 @@ module Geocoder::US
         for record in records
           record["name_phone"] = Text::Metaphone.metaphone(record["name"])
           tlid = record["tlid"]
-          locales = cache.line2place[tlid].map {|place|
-                      cache.line2zip[tlid].map {|zip| [place,zip]}}
+          locales = []
+          for place in cache.line2place[tlid]
+            for zip in cache.line2zip[tlid]
+              locales << [place,zip]
+            end
+          end
           locales.uniq!
           for place, zip in locales
             result = record.dclone
