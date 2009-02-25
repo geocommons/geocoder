@@ -115,19 +115,23 @@ module Geocoder::US::Tiger
       @path = path
     end
     def import_file (cls, db)
+      archive, = Dir["#{@path}/*_#{cls.suffix}.zip"]
+      throw "can't find #{cls.suffix} ZIP file in #{@path}" if archive.nil?
       Dir.mktmpdir {|dir|
-        Zip::ZipFile::open("#{@path}_#{cls.suffix}.zip") { |zf|
+        Zip::ZipFile::open(archive) { |zf|
            zf.each {|file| zf.extract(file, File.join(dir, file.name)) }
         } 
-        extracted = File.join(dir, File.basename(@path))
+        archive[/_[a-z]+\.zip$/] = ""
+        extracted = File.join(dir, File.basename(archive))
         source = cls.new(extracted, @cache)
         db.import_all(source)
       }
     end
     def import (db)
+      puts "importing places from " + @path
       import_file(CurrentPlaces, db)
       Find.find(@path) {|dir|
-        County.new(dir).import(db) if File.is_directory? dir
+        County.new(dir).import(db) if dir != @path and File.directory? dir
       }
     end
   end
