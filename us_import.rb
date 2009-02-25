@@ -27,7 +27,7 @@ module Geocoder::US
     def import (shape, cache)
       prepare_inserts if @inserts.nil?
       @tables.zip(@inserts).each { |table, insert|
-        if table.copy? shape.data
+        if table.copy? shape.data, cache
           table.munge(shape, cache).each {|row| insert.execute(row)} 
         end
       }
@@ -81,12 +81,12 @@ module Geocoder::US
         []
       end
 
-      def munge(shape, cache)
-        data = @fields.map {|k,v| shape.data[k.upcase]}
+      def munge(record, cache)
+        data = @fields.map {|k,v| record.data[k.upcase]}
         [Hash[*@fields.keys.zip(data).flatten]]
       end
 
-      def copy?(shape)
+      def copy?(record, cache=nil)
         false
       end
     end
@@ -104,7 +104,7 @@ module Geocoder::US
         ["plcidfp", "name", "name_phone"]
       end
 
-      def copy?(data)
+      def copy?(data,cache=nil)
         data.key? "PLCIDFP"
       end
 
@@ -132,14 +132,14 @@ module Geocoder::US
         }
       end
 
-      def copy?(data)
-        data.key? "TFIDR"
+      def copy?(data,cache=nil)
+        data.key? "LFROMADD" and cache.tlids.key? data["TLID"]
       end
 
       def munge(record, cache)
         results = super(record, cache)
         for result in results
-          result["geometry"] = SQLite3::Blob.new(shape.geometry.as_wkb)
+          result["geometry"] = SQLite3::Blob.new(record.geometry.as_wkb)
         end
         results
       end
@@ -167,8 +167,8 @@ module Geocoder::US
         ["name"]
       end
 
-      def copy?(data)
-        data.key? "LINEARID"
+      def copy?(data,cache=nil)
+        data.key? "LINEARID" and cache.tlids.key? data["TLID"]
       end
 
       def munge(record, cache)
@@ -176,7 +176,7 @@ module Geocoder::US
         results  = []
         for record in records
           record["name_phone"] = Text::Metaphone.metaphone(record["name"])
-          tlid = records["tlid"]
+          tlid = record["tlid"]
           locales = cache.line2place[tlid].map {|place|
                       cache.line2zip[tlid].map {|zip| [place,zip]}}
           locales.uniq!
@@ -195,20 +195,19 @@ module Geocoder::US
       def fields
         {
           "tlid" => "INTEGER(10)",    # TIGER/Line ID
-          "fromhn" => "INTEGER(6)",     # From House #
+          "fromhn" => "INTEGER(6)",   # From House #
           "tohn" => "INTEGER(6)",     # To House #
-          "prefix" => "VARCHAR(12)",    # House number prefix
-          "zip" => "INTEGER(5)",     # ZIP code
-          "plus4" => "INTEGER(5)",     # ZIP plus 4
+          "prefix" => "VARCHAR(12)",  # House number prefix
+          "zip" => "INTEGER(5)",      # ZIP code
           "side" => "CHAR(1)",        # Side flag 
-          "fromtyp" => "CHAR(1)",        # From address range end type
-          "totyp" => "CHAR(1)"         # To address range end type
+          "fromtyp" => "CHAR(1)",     # From address range end type
+          "totyp" => "CHAR(1)"        # To address range end type
         }
       end
       def indexes
         ["tlid"]
       end
-      def copy?(data)
+      def copy?(data, cache=nil)
         data.key? "FROMHN"
       end
     end
@@ -217,13 +216,15 @@ module Geocoder::US
   module Tiger
     class Cache
       attr :face2place
-      attr :line2face
+      attr :line2place
       attr :line2zip
+      attr :tlids
   
       def reset!
         @face2place = {}
         @line2place = {}
         @line2zip   = {}
+        @tlids      = {}
       end
       
       alias initialize reset!
@@ -291,6 +292,9 @@ module Geocoder::US
       def suffix
         "addr"
       end
+      def add_to_cache(record)
+        @cache.tlids[record["TLID"]] = true
+      end
     end
 
     class FeatureNames < Dbf
@@ -313,8 +317,10 @@ module Geocoder::US
         @filename = filename
         @cache = Cache.new()
       end
-      def import
-        for cls in [TopoFaces, AllLines, FeatureNames, AddressRanges]
+      def import (db)
+        puts "importing " + @filename
+        for cls in [TopoFaces, AddressRanges, AllLines, FeatureNames]
+          puts "  loading " + cls.name
           source = cls.new(@filename, @cache)
           db.import_all(source)
         end
