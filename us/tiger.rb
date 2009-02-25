@@ -126,7 +126,7 @@ module Geocoder::US::Tiger
     end
     def import (db)
       import_file(CurrentPlaces, db)
-      Find.find @path {|dir|
+      Find.find(@path) {|dir|
         County.new(dir).import(db) if File.is_directory? dir
       }
     end
