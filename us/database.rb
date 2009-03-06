@@ -25,24 +25,20 @@ module Geocoder::US
     end
 
     def insert (record)
-      @insert = prepare_inserts if @insert.nil?
       @insert[record.class].execute(record.values)
     end
 
     def transact
+      @insert = prepare_inserts
       @db.transaction { yield }
-    end
-
-    def transaction
-      @db.transaction
-    end
-
-    def commit
-      @db.commit
     end
 
     def create_all
       @tables.each {|t| @db.execute_batch(t.create)}
+    end
+    
+    def index_all
+      @tables.each {|t| @db.execute_batch(t.create_index)}
     end
 
     def close
@@ -72,12 +68,15 @@ module Geocoder::US
       end
       def create
         columns = fields.zip(@types).map {|k,v| k.to_s+" "+v}.join ",\n  "
-        sql = "CREATE TABLE #{table} (\n  #{columns});\n"
+        "CREATE TABLE #{table} (\n  #{columns});\n"
+      end
+      def create_index
+        sql = ""
         for idx in @indexes
-          idxname = table + "_"+ idx.to_s + "_idx"
+          idxname = table + "_"+ idx.to_s.gsub(",","_") + "_idx"
           sql += "CREATE INDEX #{idxname} ON #{table} (#{idx});\n"
         end
-        return sql
+        sql
       end
       def insert
         columns = fields.map {|f| f.to_s}.join(",")
@@ -97,13 +96,6 @@ module Geocoder::US
       @name_phone = Text::Metaphone.metaphone(value)
       @name = value
     end
-  end
-
-  class Place < Table
-    field :plcidfp, "INTEGER(7)", true
-    field :name, "VARCHAR(100)", true
-    field :name_phone, "VARCHAR(100)", true
-    alias name= set_name 
   end
 
   class Edge < Table
@@ -133,7 +125,6 @@ module Geocoder::US
     field :suftyp, "VARCHAR(3)"       # Suffix type component
     field :sufqual, "VARCHAR(2)"      # Suffix qualifier component
     field :paflag, "BOOLEAN"          # Primary/Alternate flag
-    field :place, "INTEGER(7)"        # FIPS place ID
     field :zip, "INTEGER(5)", true    # ZIP code
     alias name= set_name 
   end
