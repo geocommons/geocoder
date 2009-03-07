@@ -7,14 +7,10 @@ require 'us/database'
 
 module Geocoder::US
   class Cache
-    attr :face2place
-    attr :line2place
     attr :line2zip
     attr :tlids
 
     def reset!
-      @face2place = {}
-      @line2place = {}
       @line2zip   = {}
       @tlids      = {}
     end
@@ -87,11 +83,6 @@ module Geocoder::US
     end
   end
 
-  class CurrentPlaces < Dbf
-    suffix :place
-    target Place
-  end
-
   class AllLines < Shp
     suffix :edges
     target Edge
@@ -116,9 +107,16 @@ module Geocoder::US
     target Range
   end
 
+  class FeatureAddress < Dbf
+    suffix :addrfn
+    target FeatureRange
+    map :linearid => :featid
+  end
+
   class FeatureNames < Dbf
     suffix :featnames
     target Feature
+    map :linearid => :featid
     map :predirabrv => :predir
     map :pretypabrv => :pretyp
     map :prequalabr => :prequal
@@ -147,13 +145,6 @@ module Geocoder::US
     end
   end 
 
-  class TopoFaces < Dbf
-    suffix :faces
-    def process (data)
-      []
-    end
-  end
-
   class State
     def initialize (path)
       @path = path
@@ -177,7 +168,6 @@ module Geocoder::US
     end
     def import (db)
       puts "importing places from " + @path
-      # db.transact { import_file(CurrentPlaces, db) }
       Find.find(@path) {|dir|
         County.new(dir).import(db) if dir != @path and File.directory? dir
       }
@@ -191,15 +181,13 @@ module Geocoder::US
     end
     def import (db)
       puts "importing " + @path
-      #db.transact {
-        #for cls in [TopoFaces, AddressRanges, AllLines, FeatureNames]
-      db.transaction
+      db.transact {
         for cls in [AddressRanges, AllLines, FeatureNames]
           puts "  loading " + cls.name
           import_file(cls, db)
         end
-      db.commit
-      #}
+      }
+      throw
     end
   end
 end
