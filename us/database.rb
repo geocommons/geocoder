@@ -11,6 +11,7 @@ module Geocoder::US
     def initialize (filename)
       @db = SQLite3::Database.new( filename )
       @tables = table_classes
+      tune;
     end
 
     def table_classes
@@ -39,6 +40,17 @@ module Geocoder::US
     
     def index_all
       @tables.each {|t| @db.execute_batch(t.create_index)}
+    end
+
+    def tune
+      # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
+      @db.execute_batch(<<'      SQL')
+        PRAGMA temp_store=MEMORY;
+        PRAGMA journal_mode=MEMORY;
+        PRAGMA synchronous=OFF;
+        PRAGMA cache_size=20000;
+        PRAGMA count_changes=0;
+      SQL
     end
 
     def close
@@ -115,8 +127,8 @@ module Geocoder::US
   end
 
   class Feature < Table
-    field :tlid, "INTEGER(10)", true    # TIGER/Line ID
-    field :name, "VARCHAR(100)", true   # Base portion of name
+    field :featid, "INTEGER(22)"        # TIGER/Line LINEARID
+    field :name, "VARCHAR(100)", true # Base portion of name
     field :name_phone, "VARCHAR(100)", true  # Metaphone hash of name
     field :predir, "VARCHAR(2)"       # Prefix direction component
     field :pretyp, "VARCHAR(3)"       # Prefix type component
@@ -129,8 +141,14 @@ module Geocoder::US
     alias name= set_name 
   end
 
+  class FeatureRange < Table
+    field :featid, "INTEGER(22)", true
+    field :arid, "INTEGER(22)"
+  end
+
   class Range < Table
-    field :tlid, "INTEGER(10)", true    # TIGER/Line ID
+    field :addrid, "INTEGER(22)", true
+    field :tlid, "INTEGER(10)"          # TIGER/Line ID
     field :fromhn, "INTEGER(6)"         # From House #
     field :tohn, "INTEGER(6)"           # To House #
     field :prefix, "VARCHAR(12)"        # House number prefix
