@@ -21,7 +21,7 @@ INSERT INTO feature
         WHERE l.tlid=f.tlid;
 
 INSERT INTO edge
-    SELECT l.tlid, substr(the_geom,10) FROM linezip l, tiger_edges e
+    SELECT l.tlid, compress_wkb_line(the_geom) FROM linezip l, tiger_edges e
         WHERE l.tlid=e.tlid;
 
 INSERT INTO range SELECT tlid, fromhn, tohn, NULL, zip, side FROM tiger_addr;
