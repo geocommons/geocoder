@@ -5,7 +5,8 @@ SHPS="edges"
 DBFS="featnames addr"
 BASE=$(dirname $0)
 SQL="$BASE/../sql"
-METAPHONE="$BASE/../metaphone/metaphone.so"
+METAPHONE="$BASE/../lib/metaphone.so"
+WKB_COMPRESS="$BASE/../lib/wkb_compress.so"
 DATABASE=$1
 shift
 
@@ -21,6 +22,7 @@ ls -d $@ | while read state; do
             unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
         done
         (echo ".load $METAPHONE" && \
+         echo ".load $WKB_COMPRESS" && \
          cat ${SQL}/tiger.sql && \
          for file in $SHPS; do
            shp2pgsql -aSL $(ls ${TMP}/*_${file}.shp) tiger_${file}
