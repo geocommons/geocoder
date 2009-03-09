@@ -1,0 +1,49 @@
+= SQLite 3 Metaphone extension =
+
+ * This library implements the Metaphone algorithm, originally developed by
+   Laurence Phillips, as an SQLite 3 extension function:
+
+     http://en.wikipedia.org/wiki/Metaphone
+
+ * This code is based around the original public domain implementation in
+   C by Gary Phillips, as provided by Sadi Evren Seker:
+
+    http://www.shedai.net/c/new/METAPHON.C
+
+ * Like SQLite and the Phillips implementation of Metaphone, this code
+   is provided in the public domain, in the hope that it will be useful.
+
+ * To compile the code, simply run `make`. You must have GNU Make and GCC
+   installed.
+
+ * The module implements one function, metaphone(), which takes a string
+   to convert to a metaphone representation as its first argument, and an
+   optional second argument to specify the maximum length of the output.
+
+ * To use the code, run `sqlite3` and enter the following:
+
+{{{
+    sqlite> .load /path/to/metaphone.so
+            -- you can use ./metaphone.so if the .so is in your 
+            -- current directory, or just metaphone.so if it's
+            -- somewhere in your library path.
+    sqlite> select metaphone("Schuyler");
+    SKLR
+    sqlite> select metaphone("Schuyler", 3);
+    SKL
+    sqlite> select metaphone("Skyler");
+    SKLR
+    sqlite> select metaphone("Skylar");
+    SKLR
+    sqlite> select metaphone("SQLite rules!");
+    SKLTRLS
+    sqlite> select metaphone("SQLite roolz!!!1!");
+    SKLTRLS
+}}}
+
+Questions? Comments? Complaints? Approbation? Email schuyler@nocat.net.
+
+Schuyler Erle
+9 March 2008
+
+=30=
