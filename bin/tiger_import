@@ -1,0 +1,33 @@
+#!/bin/bash
+
+TMP="/tmp/tiger-import.$$"
+SHPS="edges"
+DBFS="featnames addr"
+BASE=$(dirname $0)
+SQL="$BASE/../sql"
+METAPHONE="$BASE/../metaphone/metaphone.so"
+DATABASE=$1
+shift
+
+mkdir -p $TMP || exit 1
+
+[ ! -r $DATABASE ] && sqlite3 $DATABASE <${SQL}/create.sql
+
+for county in $(ls -d $@); do
+    echo "--- $county"
+    for file in $SHPS $DBFS; do
+        unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
+    done
+    (echo ".load $METAPHONE" && \
+     cat ${SQL}/tiger.sql && \
+     for file in $SHPS; do
+       shp2pgsql -aSL $(ls ${TMP}/*_${file}.shp) tiger_${file}
+     done && \
+     for file in $DBFS; do
+       shp2pgsql -anL $(ls ${TMP}/*_${file}.dbf) tiger_${file}
+     done && \
+     cat ${SQL}/convert.sql) | sqlite3 $DATABASE
+    rm -f $TMP/*
+done
+
+rm -rf $TMP
