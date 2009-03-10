@@ -1,0 +1,6 @@
+#!/bin/bash
+
+BASE=$(dirname $0)
+SQL="$BASE/../sql"
+
+sqlite3 $1 < ${SQL}/index.sql
