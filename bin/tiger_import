@@ -13,13 +13,13 @@ shift
 mkdir -p $TMP || exit 1
 
 [ ! -r $DATABASE ] && sqlite3 $DATABASE <${SQL}/create.sql
-
-if [ -n "$@" ]; then
+ 
+if [ x"$@" = x"" ]; then
+    cat
+else
     ls -d $@ | while read state; do
         ls -d ${state}/[0-9]*
     done
-else
-    cat
 fi | while read county; do
     echo "--- $county"
     for file in $SHPS $DBFS; do
