@@ -8,21 +8,22 @@ CREATE TEMPORARY TABLE linezip AS
         SELECT tlid, zip FROM tiger_addr a
         UNION
         SELECT tlid, zipr AS zip FROM tiger_edges e
-           WHERE e.mtfcc LIKE 'S%' AND zipr <> ""
+           WHERE e.mtfcc LIKE 'S%' AND zipr <> "" AND zipr IS NOT NULL
         UNION
         SELECT tlid, zipl AS zip FROM tiger_edges e
-           WHERE e.mtfcc LIKE 'S%' AND zipl <> ""
+           WHERE e.mtfcc LIKE 'S%' AND zipl <> "" AND zipl IS NOT NULL
     ) AS whatever;
 
 INSERT INTO feature
     SELECT l.tlid, name, metaphone(name,5), predirabrv, pretypabrv,
            prequalabr, sufdirabrv, suftypabrv, sufqualabr, paflag, zip
         FROM linezip l, tiger_featnames f
-        WHERE l.tlid=f.tlid;
+        WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
 INSERT INTO edge
     SELECT l.tlid, compress_wkb_line(the_geom) FROM linezip l, tiger_edges e
-        WHERE l.tlid=e.tlid;
+        WHERE l.tlid=e.tlid AND fullname <> "" AND fullname IS NOT NULL;
 
-INSERT INTO range SELECT tlid, fromhn, tohn, NULL, zip, side FROM tiger_addr;
+INSERT INTO range
+    SELECT tlid, fromhn, tohn, NULL, zip, side FROM tiger_addr;
 END;
