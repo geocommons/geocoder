@@ -14,24 +14,27 @@ mkdir -p $TMP || exit 1
 
 [ ! -r $DATABASE ] && sqlite3 $DATABASE <${SQL}/create.sql
 
-ls -d $@ | while read state; do
-    echo "--- $state"
-    ls -d ${state}/[0-9]* | while read county; do
-        echo "--- $county"
-        for file in $SHPS $DBFS; do
-            unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
-        done
-        (echo ".load $METAPHONE" && \
-         echo ".load $WKB_COMPRESS" && \
-         cat ${SQL}/tiger.sql && \
-         for file in $SHPS; do
-           shp2pgsql -aSL $(ls ${TMP}/*_${file}.shp) tiger_${file}
-         done && \
-         for file in $DBFS; do
-           shp2pgsql -anL $(ls ${TMP}/*_${file}.dbf) tiger_${file}
-         done && \
-         cat ${SQL}/convert.sql) | sqlite3 $DATABASE
-        rm -f $TMP/*
+if [ -n "$@" ]; then
+    ls -d $@ | while read state; do
+        ls -d ${state}/[0-9]*
     done
+else
+    cat
+fi | while read county; do
+    echo "--- $county"
+    for file in $SHPS $DBFS; do
+        unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
+    done
+    (echo ".load $METAPHONE" && \
+     echo ".load $WKB_COMPRESS" && \
+     cat ${SQL}/tiger.sql && \
+     for file in $SHPS; do
+       shp2pgsql -aSL $(ls ${TMP}/*_${file}.shp) tiger_${file}
+     done && \
+     for file in $DBFS; do
+       shp2pgsql -anL $(ls ${TMP}/*_${file}.dbf) tiger_${file}
+     done && \
+     cat ${SQL}/convert.sql) | sqlite3 $DATABASE
+    rm -f $TMP/*
 done
 rm -rf $TMP
