@@ -11,6 +11,10 @@ sqlite3_metaphone (sqlite3_context *context, int argc, sqlite3_value **argv) {
     int max_phones = 0;
     char *output; 
     int len;
+    if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
+        sqlite3_result_null(context);
+        return;
+    }
     if (argc > 1)
         max_phones = sqlite3_value_int(argv[1]);
     if (max_phones <= 0)

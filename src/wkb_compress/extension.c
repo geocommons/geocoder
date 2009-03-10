@@ -9,8 +9,12 @@ static SQLITE_EXTENSION_INIT1;
 static void
 sqlite3_compress_wkb_line (sqlite3_context *context,
                            int argc, sqlite3_value **argv) {
-    const void *input = sqlite3_value_blob(argv[0]);
+    if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
+        sqlite3_result_null(context);
+        return;
+    }
     unsigned long input_len = sqlite3_value_bytes(argv[0]);
+    const void *input = sqlite3_value_blob(argv[0]);
     unsigned long output_len = (input_len-9)/2;
     unsigned long len = 0;
     void *output = sqlite3_malloc(output_len);
@@ -22,8 +26,8 @@ sqlite3_compress_wkb_line (sqlite3_context *context,
 static void
 sqlite3_uncompress_wkb_line (sqlite3_context *context,
                            int argc, sqlite3_value **argv) {
-    const void *input = sqlite3_value_blob(argv[0]);
     unsigned long input_len = sqlite3_value_bytes(argv[0]);
+    const void *input = sqlite3_value_blob(argv[0]);
     unsigned long output_len = input_len*2+9;
     unsigned long len = 0;
     void *output = sqlite3_malloc(output_len);
