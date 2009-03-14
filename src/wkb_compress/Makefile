@@ -1,6 +1,6 @@
 all: wkb_compress.so
 
-wkb_compress.so: extension.o wkb_compress.o
+wkb_compress.so: extension.o wkb_compress.o prefix.o
 	$(CC) -shared $^ -o $@
 
 test: wkb_compress.c

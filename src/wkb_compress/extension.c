@@ -7,6 +7,19 @@
 static SQLITE_EXTENSION_INIT1;
 
 static void
+sqlite3_rindex_nondigit (sqlite3_context *context,
+                           int argc, sqlite3_value **argv) {
+    if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
+        sqlite3_result_null(context);
+        return;
+    }
+    const unsigned char *input = sqlite3_value_text(argv[0]);
+    size_t idx = rindex_nondigit(input);
+    sqlite3_result_int(context, idx);
+}
+
+
+static void
 sqlite3_compress_wkb_line (sqlite3_context *context,
                            int argc, sqlite3_value **argv) {
     if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
@@ -43,5 +56,7 @@ int sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
                             NULL, sqlite3_compress_wkb_line, NULL, NULL);
     sqlite3_create_function(db, "uncompress_wkb_line", 1, SQLITE_ANY,
                             NULL, sqlite3_uncompress_wkb_line, NULL, NULL);
+    sqlite3_create_function(db, "rindex_nondigit", 1, SQLITE_ANY,
+                            NULL, sqlite3_rindex_nondigit, NULL, NULL);
     return 0;
 }
