@@ -411,8 +411,10 @@ main (int ARGC, char **ARGV)
 		 
 		SetPgType();
 	
+                /*
 		fprintf(stderr, "Shapefile type: %s\n", SHPTypeName(shpfiletype));
 		fprintf(stderr, "Postgis type: %s[%d]\n", pgtype, pgdims);
+                */
 	}
 
 #ifdef HAVE_ICONV
