@@ -53,10 +53,10 @@ Address Lookup Strategy
    and an empty set of candidate address records.
 
 #. If a ZIP was given, look up the place from the ZIP, and add the
-   place, if any, to the candidate place set.
+   place, if any, to the candidate place set. [zip]_
 
 #. If a city was given, look up all the places matching the metaphone hash
-   of the city name, and add them, if any, to the candidate place set.
+   of the city name, and add them, if any, to the candidate place set. [city]_
 
 #. Generate a unique set of ZIPs from the set of candidate places, since a ZIP
    may have one or more names associated with it.
@@ -65,13 +65,13 @@ Address Lookup Strategy
    features matching the metaphone hash of the street name and one of the ZIPs
    in the query set, along with the ranges matching the edge ID of each
    feature, where the given number is in the range. The edge does not
-   need to be fetched yet.
+   need to be fetched yet. [featnamezip]_
 
 #. If the look up generates no results, optionally look up all the street
    features matching the metaphone hash of the street name, along with the
    ranges matching the edge ID of each feature, where the given number is
    in the range. This may be a very time consuming database query, because
-   some street names are quite common.
+   some street names are quite common. [featname]_
 
 #. Score each of the candidate records as follows:
 
@@ -92,14 +92,14 @@ Address Lookup Strategy
    that share the highest confidence as candidates.
 
 #. Fetch the edges and primary feature names matching the edge IDs of
-   the remaining candidate address records.
+   the remaining candidate address records. [pfeat]_
 
 #. For each remaining candidate record:
 
    a. Replace the candidate record feature elements with those of the
       primary feature name for that edge.
    #. Fetch all of the ranges for the edge ID of the candidate, sorted by
-      starting number.
+      starting number. [ranges]_
    #. Compute the sum of the differences of the starting and ending house
       number for each range. This is the total number width of the edge.
    #. Take the difference between the candidate starting number and the lowest
@@ -114,7 +114,31 @@ Address Lookup Strategy
 
 #. Construct a set of result ZIPs from the remaining candidates, and look up
    the primary name and state for each ZIP in the set. Assign the matching
-   primary city and state to each candidate.
+   primary city and state to each candidate. [pzip]_
 
 #. Return the set of candidate records as the result of the query.
  
+SQL Statements
+--------------
+
+.. [zip] ``SELECT * FROM place WHERE zip = '...';``
+
+.. [city] ``SELECT * FROM place WHERE city_phone = metaphone('...');``
+
+.. [featnamezip] ``SELECT feature.*, range.* FROM feature, range
+       WHERE name_phone = metaphone('...') AND feature.zip IN (...)
+       AND range.tlid = feature.tlid AND fromhn >= ... AND tohn <= ...;``
+
+.. [featname] ``SELECT feature.*, range.* FROM feature, range
+       WHERE name_phone = metaphone('...')
+       AND range.tlid = feature.tlid AND fromhn >= ... AND tohn <= ...;``
+
+.. [pfeat] ``SELECT feature.*, edge.* FROM feature, edge
+       WHERE feature.tlid = ... AND edge.tlid = ...
+       AND paflag = 'P';``
+
+.. [ranges] ``SELECT * FROM range WHERE range.tlid = ...;``
+
+.. [pzip] ``SELECT * FROM place WHERE zip IN (...) AND paflag = 'P';``
+
+= 30 =
