@@ -49,6 +49,11 @@ int metaphone(const char *Word, char *Metaph, int max_phones)
                                     /* Word with uppercase letters      */
       int KSflag;                   /* State flag for X translation     */
 
+      /* SDE -- special case: if the word starts with a number, just
+       * copy the leading digits and return. This means we don't
+       * metaphone cardinal number suffixes (i.e. "st","nd","rd") */
+      int leading_digit = isdigit(*Word);
+
       /*
       ** Copy word to internal buffer, dropping non-alphabetic characters
       ** and converting to upper case.
@@ -57,6 +62,9 @@ int metaphone(const char *Word, char *Metaph, int max_phones)
       for (n = ntrans + 1, n_end = ntrans + ntrans_len - 2;
             *Word && n < n_end; ++Word)
       {
+            /* SDE -- see previous comment */
+            if (leading_digit && isalpha(*Word))
+                  break;
             /* SDE -- copy numbers as well, for geocoding street names */
             /* was: if (isalpha(*Word)) */
             if (isalnum(*Word)) 
