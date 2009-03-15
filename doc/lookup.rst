@@ -91,11 +91,14 @@ Address Lookup Strategy
 #. Sort the candidate address records by confidence. Retain only the records
    that share the highest confidence as candidates.
 
-#. Fetch all of the edges matching the remaining the candidate address records.
+#. Fetch the edges and primary feature names matching the edge IDs of
+   the remaining candidate address records.
 
-#. For each remaining candidate records:
+#. For each remaining candidate record:
 
-   a. Fetch all of the ranges for the edge ID of the candidate, sorted by
+   a. Replace the candidate record feature elements with those of the
+      primary feature name for that edge.
+   #. Fetch all of the ranges for the edge ID of the candidate, sorted by
       starting number.
    #. Compute the sum of the differences of the starting and ending house
       number for each range. This is the total number width of the edge.
