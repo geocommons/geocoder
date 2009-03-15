@@ -82,18 +82,18 @@ Address Lookup Strategy
       element of the address query and the corresponding element in the
       candidate. Score one minus the scaled distance, which yields a fraction
       of a point.
-   #. Score one point if the starting range number matches the parity of the
-      queried address number.
+   #. Score one point if the parity of starting range number matches the parity
+      of the queried address number.
    #. Note that the maximum possible score is equal to the number of provided
-      elements in the address query. Divide the score against the maximum
-      possible. This is the confidence value of the candidate.
+      elements in the address query. Divide the score by the maximum possible.
+      This is the confidence value of the candidate.
 
-#. Sort the candidate address range records by confidence. Retain only the
-   records that share the highest confidence as candidates.
+#. Sort the candidate address records by confidence. Retain only the records
+   that share the highest confidence as candidates.
 
-#. Fetch all of the edges matching the remaining the candidate address ranges.
+#. Fetch all of the edges matching the remaining the candidate address records.
 
-#. For each remaining candidate range:
+#. For each remaining candidate records:
 
    a. Fetch all of the ranges for the edge ID of the candidate, sorted by
       starting number.
@@ -110,8 +110,8 @@ Address Lookup Strategy
       record.
 
 #. Construct a set of result ZIPs from the remaining candidates, and look up
-   the primary name and state for each ZIP in the set. Assign the primary city
-   and state to each candidate.
+   the primary name and state for each ZIP in the set. Assign the matching
+   primary city and state to each candidate.
 
 #. Return the set of candidate records as the result of the query.
  
