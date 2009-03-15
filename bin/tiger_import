@@ -29,10 +29,10 @@ fi | while read county; do
      echo ".load $WKB_COMPRESS" && \
      cat ${SQL}/tiger.sql && \
      for file in $SHPS; do
-       shp2pgsql -aSL $(ls ${TMP}/*_${file}.shp) tiger_${file}
+       shp2sqlite -aS $(ls ${TMP}/*_${file}.shp) tiger_${file}
      done && \
      for file in $DBFS; do
-       shp2pgsql -anL $(ls ${TMP}/*_${file}.dbf) tiger_${file}
+       shp2sqlite -an $(ls ${TMP}/*_${file}.dbf) tiger_${file}
      done && \
      cat ${SQL}/convert.sql) | sqlite3 $DATABASE
     rm -f $TMP/*
