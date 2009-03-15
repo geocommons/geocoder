@@ -21,7 +21,7 @@ sqlite3_metaphone (sqlite3_context *context, int argc, sqlite3_value **argv) {
         max_phones = strlen(input);
     output = sqlite3_malloc((max_phones+1)*sizeof(char));
     len = metaphone(input, output, max_phones); 
-    sqlite3_result_text(context, output, len, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, output, len, sqlite3_free);
 }
 
 static void
@@ -34,7 +34,7 @@ sqlite3_digit_suffix (sqlite3_context *context,
     const unsigned char *input = sqlite3_value_text(argv[0]);
     char *output = sqlite3_malloc((strlen(input)+1) * sizeof(char));
     size_t len = digit_suffix(input, output);
-    sqlite3_result_text(context, output, len, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, output, len, sqlite3_free);
 }
 
 static void
@@ -47,7 +47,7 @@ sqlite3_nondigit_prefix (sqlite3_context *context,
     const unsigned char *input = sqlite3_value_text(argv[0]);
     char *output = sqlite3_malloc((strlen(input)+1) * sizeof(char));
     size_t len = nondigit_prefix(input, output);
-    sqlite3_result_text(context, output, len, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, output, len, sqlite3_free);
 }
 
 
@@ -65,7 +65,7 @@ sqlite3_compress_wkb_line (sqlite3_context *context,
     void *output = sqlite3_malloc(output_len);
     len = compress_wkb_line(output, input, input_len); 
     assert(len == output_len);
-    sqlite3_result_blob(context, output, len, SQLITE_TRANSIENT);
+    sqlite3_result_blob(context, output, len, sqlite3_free);
 }
 
 static void
@@ -78,7 +78,7 @@ sqlite3_uncompress_wkb_line (sqlite3_context *context,
     void *output = sqlite3_malloc(output_len);
     len = uncompress_wkb_line(output, input, input_len); 
     assert(len == output_len);
-    sqlite3_result_blob(context, output, len, SQLITE_TRANSIENT);
+    sqlite3_result_blob(context, output, len, sqlite3_free);
 }
 
 int sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
