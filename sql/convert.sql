@@ -25,5 +25,7 @@ INSERT INTO edge
         WHERE l.tlid=e.tlid AND fullname <> "" AND fullname IS NOT NULL;
 
 INSERT INTO range
-    SELECT tlid, fromhn, tohn, NULL, zip, side FROM tiger_addr;
+    SELECT tlid, digit_suffix(fromhn), digit_suffix(tohn),
+           nondigit_prefix(fromhn), zip, side
+    FROM tiger_addr;
 END;
