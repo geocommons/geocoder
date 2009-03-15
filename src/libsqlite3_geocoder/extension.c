@@ -26,21 +26,6 @@ sqlite3_metaphone (sqlite3_context *context, int argc, sqlite3_value **argv) {
 }
 
 static void
-sqlite3_address_metaphone (sqlite3_context *context, int argc, sqlite3_value **argv) {
-    const unsigned char *input = sqlite3_value_text(argv[0]);
-    int max_phones = sqlite3_value_int(argv[1]);
-    char *output; 
-    int len;
-    if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
-        sqlite3_result_null(context);
-        return;
-    }
-    output = sqlite3_malloc((max_phones+1)*sizeof(char));
-    len = address_metaphone(input, output, max_phones); 
-    sqlite3_result_text(context, output, len, SQLITE_TRANSIENT);
-}
-
-static void
 sqlite3_digit_suffix (sqlite3_context *context,
                            int argc, sqlite3_value **argv) {
     if (sqlite3_value_type(argv[0]) == SQLITE_NULL) {
@@ -100,8 +85,6 @@ sqlite3_uncompress_wkb_line (sqlite3_context *context,
 int sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
                             const sqlite3_api_routines *pApi) {
     SQLITE_EXTENSION_INIT2(pApi);
-    sqlite3_create_function(db, "address_metaphone", 2, SQLITE_ANY,
-                            NULL, sqlite3_address_metaphone, NULL, NULL);
     sqlite3_create_function(db, "metaphone", 1, SQLITE_ANY,
                             NULL, sqlite3_metaphone, NULL, NULL);
     sqlite3_create_function(db, "metaphone", 2, SQLITE_ANY,

@@ -57,7 +57,9 @@ int metaphone(const char *Word, char *Metaph, int max_phones)
       for (n = ntrans + 1, n_end = ntrans + ntrans_len - 2;
             *Word && n < n_end; ++Word)
       {
-            if (isalpha(*Word))
+            /* SDE -- copy numbers as well, for geocoding street names */
+            /* was: if (isalpha(*Word)) */
+            if (isalnum(*Word)) 
                   *n++ = toupper(*Word);
       }
 
@@ -126,8 +128,13 @@ int metaphone(const char *Word, char *Metaph, int max_phones)
             }
             else
             {
-                  /* Drop duplicates except for CC    */
+                  /* SDE -- special case: copy numbers verbatim */
+                  if (isdigit(*n)) {
+                        *Metaph++ = *n;
+                        continue;
+                  }
 
+                  /* Drop duplicates except for CC    */
                   if (*(n - 1) == *n && *n != 'C')
                         continue;
 
