@@ -1,45 +1,15 @@
 require 'rubygems'
 require 'sqlite3'
 require 'geo_ruby'
-require 'text'
+require 'geocoder/us/address'
 
-module Geocoder
-end
-
-module Geocoder::US
+module Geocoder::US::Database
   class Database
     def initialize (filename)
       @db = SQLite3::Database.new( filename )
-      @tables = table_classes
+      @db.results_as_hash = true
+      @st = {}
       tune;
-    end
-
-    def table_classes
-      table_module = Geocoder::US
-      table_class  = table_module.const_get("Table")
-      table_module.constants.map {|cname| table_module.const_get(cname)} \
-                       .find_all {|cls| cls.superclass == table_class}
-    end
-
-    def prepare_inserts
-      Hash[@tables.map {|t| [t,@db.prepare(t.insert)]}];
-    end
-
-    def insert (record)
-      @insert[record.class].execute(record.values)
-    end
-
-    def transact
-      @insert = prepare_inserts
-      @db.transaction { yield }
-    end
-
-    def create_all
-      @tables.each {|t| @db.execute_batch(t.create)}
-    end
-    
-    def index_all
-      @tables.each {|t| @db.execute_batch(t.create_index)}
     end
 
     def tune
@@ -48,111 +18,79 @@ module Geocoder::US
         PRAGMA temp_store=MEMORY;
         PRAGMA journal_mode=MEMORY;
         PRAGMA synchronous=OFF;
-        PRAGMA cache_size=20000;
+        PRAGMA cache_size=200000;
         PRAGMA count_changes=0;
       SQL
     end
 
-    def close
-      @db.close
+    def prepare (sql)
+      if @st.has_key? sql
+        @st[sql].reset
+      else
+        @st[sql] = @db.prepare sql
+      end
+      return @st[sql]
     end
-  end
 
-  class Table
-    class << self
-      def field (name, type="VARCHAR(255)",idx=false)
-        @fields ||= []
-        @fields << name
-        @types ||= []
-        @types << type
-        index name if idx
-        send :attr, name, true
-      end
-      def fields
-        @fields
-      end
-      def index (name)
-        @indexes ||= []
-        @indexes << name
-      end
-      def table
-        @table ||= name.sub(/.*:/,"").downcase
-      end
-      def create
-        columns = fields.zip(@types).map {|k,v| k.to_s+" "+v}.join ",\n  "
-        "CREATE TABLE #{table} (\n  #{columns});\n"
-      end
-      def create_index
-        sql = ""
-        for idx in @indexes
-          idxname = table + "_"+ idx.to_s.gsub(",","_") + "_idx"
-          sql += "CREATE INDEX #{idxname} ON #{table} (#{idx});\n"
-        end
-        sql
-      end
-      def insert
-        columns = fields.map {|f| f.to_s}.join(",")
-        places  = (["?"] * fields.length).join(",")
-        "INSERT INTO #{table} (#{columns}) VALUES (#{places});"
-      end
+    def placeholders_for (list)
+      (["?"] * list.length).join(",")
     end
-    def initialize (data={})
-      for field in self.class.fields
-        self.send((field.to_s+"=").to_sym, data[field])
-      end
+
+    def execute (st, *params)
+      @db.execute prepare(st), *params
     end
-    def values
-      self.class.fields.map {|f| self.send f}
+
+    def places_by_zip (zip)
+      execute "SELECT * FROM place WHERE zip = ?", zip
     end
-    def set_name (value)
-      @name_phone = Text::Metaphone.metaphone(value)
-      @name = value
+
+    def places_by_city (city)
+      execute "SELECT * FROM place WHERE city_phone = metaphone(?)", city
     end
-  end
 
-  class Edge < Table
-    # ordinarily tlid is unique, but edges can be duplicated across counties
-    # where a road forms part of a county border. it'll slow the import process
-    # to have to check each one before inserting, and it'll be even slower
-    # to have to do the inserts outside a transaction where the duplicate pkey
-    # exception can be caught...
-    #
-    # field :tlid, "INTEGER(10) PRIMARY KEY", true # TIGER/Line ID
-    field :tlid, "INTEGER(10)", true # TIGER/Line ID
-    field :geometry, "BLOB"
-
-    def geometry=(value)
-      @geometry = SQLite3::Blob.new(value.as_wkb)
+    def candidate_records (number, name, zips)
+      in_list = placeholders_for zips
+      sql = <<'      SQL'
+        SELECT feature.*, range.* FROM feature, range
+          WHERE name_phone = metaphone(?)
+          AND feature.zip IN (#{in_list})
+          AND range.tlid = feature.tlid
+          AND fromhn >= ? AND tohn <= ?;
+      SQL
+      params = [name] + zips + [number, number]
+      execute sql, *params
     end
-  end
 
-  class Feature < Table
-    field :featid, "INTEGER(22)"        # TIGER/Line LINEARID
-    field :name, "VARCHAR(100)", true # Base portion of name
-    field :name_phone, "VARCHAR(100)", true  # Metaphone hash of name
-    field :predir, "VARCHAR(2)"       # Prefix direction component
-    field :pretyp, "VARCHAR(3)"       # Prefix type component
-    field :prequal, "VARCHAR(2)"      # Prefix qualifier component
-    field :sufdir, "VARCHAR(2)"       # Suffix direction component
-    field :suftyp, "VARCHAR(3)"       # Suffix type component
-    field :sufqual, "VARCHAR(2)"      # Suffix qualifier component
-    field :paflag, "BOOLEAN"          # Primary/Alternate flag
-    field :zip, "INTEGER(5)", true    # ZIP code
-    alias name= set_name 
-  end
+    def more_candidate_records (number, name)
+      sql = <<'      SQL'
+        SELECT feature.*, range.* FROM feature, range
+          WHERE name_phone = metaphone(?)
+          AND range.tlid = feature.tlid
+          AND fromhn >= ? AND tohn <= ?;
+      SQL
+      execute sql, name, number, number
+    end
 
-  class FeatureRange < Table
-    field :featid, "INTEGER(22)", true
-    field :arid, "INTEGER(22)"
-  end
+    def primary_records (edge_ids)
+      in_list = placeholders_for edge_ids
+      sql = <<'      SQL'
+        SELECT feature.*, edge.* FROM feature, edge
+          WHERE feature.tlid IN (#{in_list})
+          AND edge.tlid = feature.tlid;
+      SQL
+      execute sql, *edge_ids
+    end
 
-  class Range < Table
-    field :addrid, "INTEGER(22)", true
-    field :tlid, "INTEGER(10)"          # TIGER/Line ID
-    field :fromhn, "INTEGER(6)"         # From House #
-    field :tohn, "INTEGER(6)"           # To House #
-    field :prefix, "VARCHAR(12)"        # House number prefix
-    field :zip, "INTEGER(5)", true      # ZIP code
-    field :side, "CHAR(1)"              # Side flag 
+    def all_ranges (edge_ids)
+      in_list = placeholders_for edge_ids
+      sql = "SELECT * FROM range WHERE range.tlid IN (#{in_list});"
+      execute sql, *edge_ids
+    end
+
+    def primary_places (zips)
+      in_list = placeholders_for zips
+      sql = "SELECT * FROM place WHERE zip IN (#{in_list}) AND paflag = 'P';"
+      execute sql, *zips
+    end
   end
 end
