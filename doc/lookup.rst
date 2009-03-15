@@ -143,7 +143,7 @@ a list of candidate address records
     SELECT feature.*, range.* FROM feature, range
         WHERE name_phone = metaphone('...') AND feature.zip IN (...)
         AND range.tlid = feature.tlid
-        AND fromhn >= ... AND tohn <= ...;
+        AND fromhn <= ... AND tohn >= ...;
 
 more candidate records
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -153,7 +153,7 @@ more candidate records
     SELECT feature.*, range.* FROM feature, range
         WHERE name_phone = metaphone('...')
         AND range.tlid = feature.tlid
-        AND fromhn >= ... AND tohn <= ...;
+        AND fromhn <= ... AND tohn >= ...;
 
 the edges and primary feature names
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
