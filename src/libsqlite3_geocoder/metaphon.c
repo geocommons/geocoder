@@ -66,7 +66,7 @@ int metaphone(const char *Word, char *Metaph, int max_phones)
       if (n == ntrans + 1) {
             free(ntrans);
             Metaph[0]='\0';
-            return 1;           /* Return if zero characters        */
+            return 0;           /* Return if zero characters        */
       }
       else  n_end = n;          /* Set end of string pointer        */
 
