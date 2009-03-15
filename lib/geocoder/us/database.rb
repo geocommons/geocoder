@@ -1,20 +1,24 @@
 require 'rubygems'
 require 'sqlite3'
 require 'geo_ruby'
+require 'text'
 require 'geocoder/us/address'
 
-module Geocoder::US::Database
+module Geocoder::US
   class Database
-    def initialize (filename)
+    def initialize (filename, helper="libsqlite3_geocoder.so")
       @db = SQLite3::Database.new( filename )
       @db.results_as_hash = true
+      @db.type_translation = true
       @st = {}
-      tune;
+      tune helper;
     end
 
-    def tune
+    def tune (helper)
       # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
       @db.execute_batch(<<'      SQL')
+        -- this throws: "SQLite3::SQLException: not authorized" ... why?
+        -- SELECT load_extension("#{helper}");
         PRAGMA temp_store=MEMORY;
         PRAGMA journal_mode=MEMORY;
         PRAGMA synchronous=OFF;
@@ -24,11 +28,7 @@ module Geocoder::US::Database
     end
 
     def prepare (sql)
-      if @st.has_key? sql
-        @st[sql].reset
-      else
-        @st[sql] = @db.prepare sql
-      end
+      @st[sql] ||= @db.prepare sql
       return @st[sql]
     end
 
@@ -36,8 +36,17 @@ module Geocoder::US::Database
       (["?"] * list.length).join(",")
     end
 
+    def metaphone (txt)
+      leading_digits = /^\d+/.match txt
+      if leading_digits
+        leading_digits[0]
+      else
+        Text::Metaphone.metaphone(txt)[0..4]
+      end
+    end
+
     def execute (st, *params)
-      @db.execute prepare(st), *params
+      prepare(st).execute! *params
     end
 
     def places_by_zip (zip)
@@ -45,39 +54,35 @@ module Geocoder::US::Database
     end
 
     def places_by_city (city)
-      execute "SELECT * FROM place WHERE city_phone = metaphone(?)", city
+      execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city)
     end
 
     def candidate_records (number, name, zips)
       in_list = placeholders_for zips
-      sql = <<'      SQL'
-        SELECT feature.*, range.* FROM feature, range
-          WHERE name_phone = metaphone(?)
-          AND feature.zip IN (#{in_list})
-          AND range.tlid = feature.tlid
-          AND fromhn >= ? AND tohn <= ?;
-      SQL
-      params = [name] + zips + [number, number]
+      sql = "SELECT feature.*, range.* FROM feature, range
+               WHERE name_phone = ?
+               AND feature.zip IN (#{in_list})
+               AND range.tlid = feature.tlid
+               AND fromhn <= ? AND tohn >= ?"
+      params = [metaphone(name)] + zips + [number, number]
       execute sql, *params
     end
 
     def more_candidate_records (number, name)
       sql = <<'      SQL'
         SELECT feature.*, range.* FROM feature, range
-          WHERE name_phone = metaphone(?)
+          WHERE name_phone = ?
           AND range.tlid = feature.tlid
-          AND fromhn >= ? AND tohn <= ?;
+          AND fromhn <= ? AND tohn >= ?;
       SQL
-      execute sql, name, number, number
+      execute sql, metaphone(name), number, number
     end
 
     def primary_records (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = <<'      SQL'
-        SELECT feature.*, edge.* FROM feature, edge
-          WHERE feature.tlid IN (#{in_list})
-          AND edge.tlid = feature.tlid;
-      SQL
+      sql = "SELECT feature.*, edge.* FROM feature, edge
+               WHERE feature.tlid IN (#{in_list})
+               AND edge.tlid = feature.tlid;"
       execute sql, *edge_ids
     end
 
