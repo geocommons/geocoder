@@ -1,6 +1,6 @@
-all: wkb_compress.so
+all: libsqlite3_geocoder.so
 
-wkb_compress.so: extension.o wkb_compress.o prefix.o
+libsqlite3_geocoder.so: extension.o wkb_compress.o util.o metaphon.o
 	$(CC) -shared $^ -o $@
 
 test: wkb_compress.c

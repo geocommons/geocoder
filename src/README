@@ -1,0 +1,14 @@
+What's in this directory
+------------------------
+
+shp2sqlite/
+    A fork of shp2pgsql that generates SQLite 3 compatible
+    output. Used for import.
+liblwgeom/
+    Required by shp2sqlite for converting Shapefiles to WKB.
+libsqlite3_geocoder/
+    Not actually the geocoder itself, but a library of
+    extensions to SQLite 3 to facilitate geocoding.
+metaphone/
+    Unused in this project. The metaphone functions have
+    been rolled into libsqlite3_geocoder.

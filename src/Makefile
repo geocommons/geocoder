@@ -1,17 +1,14 @@
 all:
-	$(MAKE) -C metaphone
-	$(MAKE) -C wkb_compress
+	$(MAKE) -C libsqlite3_geocoder
 	$(MAKE)	-C liblwgeom
 	$(MAKE) -C shp2sqlite
 
 clean:
-	$(MAKE) -C metaphone clean
-	$(MAKE) -C wkb_compress clean
+	$(MAKE) -C libsqlite3_geocoder clean
 	$(MAKE)	-C liblwgeom clean
 	$(MAKE) -C shp2sqlite clean
 
 
 install: all
-	cp metaphone/*.so ../lib
-	cp wkb_compress/*.so ../lib
+	cp libsqlite3_geocoder/*.so ../lib
 	$(MAKE) -C shp2sqlite install
