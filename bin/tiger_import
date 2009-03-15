@@ -5,8 +5,7 @@ SHPS="edges"
 DBFS="featnames addr"
 BASE=$(dirname $0)
 SQL="$BASE/../sql"
-METAPHONE="$BASE/../lib/metaphone.so"
-WKB_COMPRESS="$BASE/../lib/wkb_compress.so"
+HELPER_LIB="$BASE/../lib/libsqlite3_geocoder.so"
 DATABASE=$1
 shift
 
@@ -25,8 +24,7 @@ fi | while read county; do
     for file in $SHPS $DBFS; do
         unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
     done
-    (echo ".load $METAPHONE" && \
-     echo ".load $WKB_COMPRESS" && \
+    (echo ".load $HELPER_LIB" && \
      cat ${SQL}/tiger.sql && \
      for file in $SHPS; do
        shp2sqlite -aS $(ls ${TMP}/*_${file}.shp) tiger_${file}
