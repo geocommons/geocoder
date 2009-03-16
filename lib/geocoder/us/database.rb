@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'sqlite3'
-require 'geo_ruby'
+require 'set'
 require 'text'
 require 'geocoder/us/address'
 
@@ -96,6 +96,63 @@ module Geocoder::US
       in_list = placeholders_for zips
       sql = "SELECT * FROM place WHERE zip IN (#{in_list}) AND paflag = 'P';"
       execute sql, *zips
+    end
+
+    def score_candidates! (query, candidates)
+      for candidate in candidates
+        score = 0
+        # lookup.rst (7a)
+        query.keys.each {|k| score += 1 if query[k] == candidate[k]}
+        p score
+        # lookup.rst (7b)
+        # TODO: implement me
+        # lookup.rst (7c)
+        score += 1  if candidate["fromhn"].to_i % 2 == query["number"].to_i % 2
+        p score
+        # lookup.rst (7d)
+        candidate["score"] = score.to_f / query.keys.length
+      end
+    end
+
+    def best_candidates! (candidates)
+      # lookup.rst (8)
+      candidates.sort! {|a,b| b["score"] <=> a["score"]}
+      candidates.delete_if {|record| record["score"] < candidates[0]["score"]}
+    end
+
+    def geocode (query)
+      # lookup.rst (1)
+      places = []
+
+      # lookup.rst (2)
+      places += places_by_zip query["zip"] if query["zip"] 
+
+      # lookup.rst (3)
+      places += places_by_city query["city"] if query["city"]
+
+      # lookup.rst (4)
+      zips = (places.map {|p| p["zip"]}).to_set
+
+      # lookup.rst (5)
+      candidates = candidate_records query["number"], query["name"], zips.to_a
+
+      # TODO: need to join up places and candidates here
+      
+      # lookup.rst (6)
+      unless candidates
+        candidates = more_candidate_records query["number"], query["name"] 
+      end
+
+      # lookup.rst (7)
+      score_candidates! query, candidates
+
+      # lookup.rst (8)
+      best_candidates! candidates 
+
+      # lookup.rst (9)
+      # edge_ids = (candidates.map {|r| r["tlid"]}).to_set
+      # records  = primary_records edge_ids 
+      # TODO: need to join up primary records with ranges, candidate scores, places here
     end
   end
 end
