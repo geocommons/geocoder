@@ -52,26 +52,26 @@ Address Lookup Strategy
 1. Given a an address query, initialize an empty set of candidate places,
    and an empty set of candidate address records.
 
-#. If a ZIP was given, look up the place from the ZIP, and add the
+#. If a ZIP was given, look up `the place from the ZIP`_, and add the
    place, if any, to the candidate place set.
 
-#. If a city was given, look up all the places matching the metaphone hash
-   of the city name, and add them, if any, to the candidate place set.
+#. If a city was given, look up all `the places matching the metaphone hash
+   of the city name`_, and add them, if any, to the candidate place set.
 
 #. Generate a unique set of ZIPs from the set of candidate places, since a ZIP
    may have one or more names associated with it.
 
-#. Generate a list of candidate address records by fetching all the street
+#. Generate `a list of candidate address records`_ by fetching all the street
    features matching the metaphone hash of the street name and one of the ZIPs
    in the query set, along with the ranges matching the edge ID of each
    feature, where the given number is in the range. The edge does not
    need to be fetched yet.
 
-#. If the look up generates no results, optionally look up all the street
-   features matching the metaphone hash of the street name, along with the
-   ranges matching the edge ID of each feature, where the given number is
-   in the range. This may be a very time consuming database query, because
-   some street names are quite common.
+#. If the look up generates no results, optionally generate `more candidate
+   records`_ by looking up all the street features matching the metaphone hash
+   of the street name, along with the ranges matching the edge ID of each
+   feature, where the given number is in the range. This may be a very time
+   consuming database query, because some street names are quite common.
 
 #. Score each of the candidate records as follows:
 
@@ -91,14 +91,14 @@ Address Lookup Strategy
 #. Sort the candidate address records by confidence. Retain only the records
    that share the highest confidence as candidates.
 
-#. Fetch the edges and primary feature names matching the edge IDs of
+#. Fetch `the edges and primary feature names`_ matching the edge IDs of
    the remaining candidate address records.
 
 #. For each remaining candidate record:
 
    a. Replace the candidate record feature elements with those of the
       primary feature name for that edge.
-   #. Fetch all of the ranges for the edge ID of the candidate, sorted by
+   #. Fetch `all of the ranges for the edge ID`_ of the candidate, sorted by
       starting number.
    #. Compute the sum of the differences of the starting and ending house
       number for each range. This is the total number width of the edge.
@@ -113,8 +113,81 @@ Address Lookup Strategy
       record.
 
 #. Construct a set of result ZIPs from the remaining candidates, and look up
-   the primary name and state for each ZIP in the set. Assign the matching
+   `the primary name and state for each ZIP`_ in the set. Assign the matching
    primary city and state to each candidate.
 
 #. Return the set of candidate records as the result of the query.
  
+SQL Statements
+--------------
+
+the place from the ZIP
+~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT * FROM place WHERE zip = '...';
+
+the places matching the metaphone hash of the city name
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT * FROM place WHERE city_phone = metaphone('...');
+
+a list of candidate address records
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT feature.*, range.* FROM feature, range
+        WHERE name_phone = metaphone('...') AND feature.zip IN (...)
+        AND range.tlid = feature.tlid
+        AND fromhn <= ... AND tohn >= ...;
+
+more candidate records
+~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT feature.*, range.* FROM feature, range
+        WHERE name_phone = metaphone('...')
+        AND range.tlid = feature.tlid
+        AND fromhn <= ... AND tohn >= ...;
+
+the edges and primary feature names
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT feature.*, edge.* FROM feature, edge
+        WHERE feature.tlid = ... AND paflag = 'P'
+        AND edge.tlid = feature.tlid;
+
+    -- or
+
+    SELECT feature.*, edge.* FROM feature, edge
+        WHERE feature.tlid IN (...)
+        AND paflag = 'P'
+        AND edge.tlid = feature.tlid;
+
+all of the ranges for the edge ID
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    SELECT * FROM range WHERE range.tlid = ...;
+
+    -- or
+
+    SELECT * FROM range WHERE range.tlid IN (...);
+
+the primary name and state for each ZIP
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+::
+
+    SELECT * FROM place WHERE zip IN (...) AND paflag = 'P';
+
+= 30 =
