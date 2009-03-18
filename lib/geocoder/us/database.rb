@@ -25,7 +25,7 @@ module Text::Metaphone
     # metaphones to nothing
     if s.empty?
       leading_semivowel = /^\W*([wy])/io.match w
-      return leading_semivowel[0].upcase
+      return leading_semivowel[0].upcase if leading_semivowel
     end
     return s.upcase
   end
@@ -155,7 +155,8 @@ module Geocoder::US
     def score_candidates! (query, candidates)
       for candidate in candidates
         score = 0
-        compare = query.keys.compact
+        compare = query.keys.select {|k|
+                    not (query[k].nil? or query[k].empty?)}
         compare.each {|k| 
           next if candidate[k].nil?
           # lowercase and eliminate non-word chars before comparison
