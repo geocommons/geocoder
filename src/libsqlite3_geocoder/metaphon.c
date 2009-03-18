@@ -39,228 +39,237 @@ static char vsvfn[26] = {
 #define frontv(x) (vsvfn[(x) - 'A'] & 8)  /* EIY      */
 #define noghf(x)  (vsvfn[(x) - 'A'] & 16) /* BDH      */
 
-int metaphone(const char *Word, char *Metaph, int max_phones)
-{
-      char *n, *n_start, *n_end;    /* Pointers to string               */
-      char *metaph_start = Metaph, *metaph_end;    
-                                    /* Pointers to metaph         */
-      int ntrans_len = strlen(Word)+4;
-      char *ntrans = (char *)malloc(sizeof(char) * ntrans_len);
-                                    /* Word with uppercase letters      */
-      int KSflag;                   /* State flag for X translation     */
+int metaphone(const char *Word, char *Metaph, int max_phones) {
+    char *n, *n_start, *n_end;    /* Pointers to string               */
+    char *metaph_start = Metaph, *metaph_end;    
+    /* Pointers to metaph         */
+    int ntrans_len = strlen(Word)+4;
+    char *ntrans = (char *)malloc(sizeof(char) * ntrans_len);
+    /* Word with uppercase letters      */
+    int KSflag;                   /* State flag for X translation     */
 
-      /* SDE -- special case: if the word starts with a number, just
-       * copy the leading digits and return. This means we don't
-       * metaphone cardinal number suffixes (i.e. "st","nd","rd") */
-      int leading_digit = isdigit(*Word);
+    /* SDE -- special case: if the word starts with a number, just
+     * copy the leading digits and return. This means we don't
+     * metaphone cardinal number suffixes (i.e. "st","nd","rd") */
+    int leading_digit = isdigit(*Word);
+    /* SDE -- check for a leading semivowel. needed because
+     * the copy in ntrans gets destroyed by the metaphone process. */
+    char leading_semivowel = '\0';
 
-      /*
-      ** Copy word to internal buffer, dropping non-alphabetic characters
-      ** and converting to upper case.
-      */
-
-      for (n = ntrans + 1, n_end = ntrans + ntrans_len - 2;
+    /*
+     ** Copy word to internal buffer, dropping non-alphabetic characters
+     ** and converting to upper case.
+     */
+    for (n = ntrans + 1, n_end = ntrans + ntrans_len - 2;
             *Word && n < n_end; ++Word)
-      {
-            /* SDE -- see previous comment */
-            if (leading_digit && isalpha(*Word))
-                  break;
-            /* SDE -- copy numbers as well, for geocoding street names */
-            /* was: if (isalpha(*Word)) */
-            if (isalnum(*Word)) 
-                  *n++ = toupper(*Word);
-      }
+    {
+        /* SDE -- see previous comment */
+        //if (leading_digit && isalpha(*Word))
+        //    break;
+        /* SDE -- copy numbers as well, for geocoding street names */
+        /* was: if (isalpha(*Word)) */
+        if (isalnum(*Word)) 
+            *n++ = toupper(*Word);
+    }
 
-      if (n == ntrans + 1) {
-            free(ntrans);
-            Metaph[0]='\0';
-            return 0;           /* Return if zero characters        */
-      }
-      else  n_end = n;          /* Set end of string pointer        */
+    if (n == ntrans + 1) {
+        free(ntrans);
+        Metaph[0]='\0';
+        return 0;           /* Return if zero characters        */
+    }
+    else  n_end = n;          /* Set end of string pointer        */
 
-      /*
-      ** Pad with '\0's, front and rear
-      */
+    /*
+     ** Pad with '\0's, front and rear
+     */
 
-      *n++ = '\0';
-      *n   = '\0';
-      n    = ntrans;
-      *n++ = '\0';
+    *n++ = '\0';
+    *n   = '\0';
+    n    = ntrans;
+    *n++ = '\0';
+    
+    /* SDE: check for leading semivowel here */
+    if (ntrans[1] == 'W' || ntrans[1] == 'Y')
+        leading_semivowel = ntrans[1];
 
-      /*
-      ** Check for PN, KN, GN, WR, WH, and X at start
-      */
+    /*
+     ** Check for PN, KN, GN, WR, WH, and X at start
+     */
 
-      switch (*n)
-      {
-      case 'P':
-      case 'K':
-      case 'G':
+    switch (*n)
+    {
+        case 'P':
+        case 'K':
+        case 'G':
             if ('N' == *(n + 1))
-                  *n++ = '\0';
+                *n++ = '\0';
             break;
 
-      case 'A':
+        case 'A':
             if ('E' == *(n + 1))
-                  *n++ = '\0';
+                *n++ = '\0';
             break;
 
-      case 'W':
+        case 'W':
             if ('R' == *(n + 1))
-                  *n++ = '\0';
+                *n++ = '\0';
             else if ('H' == *(n + 1))
             {
-                  *(n + 1) = *n;
-                  *n++ = '\0';
+                *(n + 1) = *n;
+                *n++ = '\0';
             }
             break;
 
-      case 'X':
+        case 'X':
             *n = 'S';
             break;
-      }
+    }
 
-      /*
-      ** Now loop through the string, stopping at the end of the string
-      ** or when the computed Metaphone code is max_phones characters long.
-      */
+    /*
+     ** Now loop through the string, stopping at the end of the string
+     ** or when the computed Metaphone code is max_phones characters long.
+     */
 
-      KSflag = 0;              /* State flag for KStranslation     */
-      for (metaph_end = Metaph + max_phones, n_start = n;
+    KSflag = 0;              /* State flag for KStranslation     */
+    for (metaph_end = Metaph + max_phones, n_start = n;
             n <= n_end && Metaph < metaph_end; ++n)
-      {
-            if (KSflag)
-            {
-                  KSflag = 0;
-                  *Metaph++ = *n;
+    {
+        if (KSflag)
+        {
+            KSflag = 0;
+            *Metaph++ = *n;
+        }
+        else
+        {
+            /* SDE -- special case: copy numbers verbatim */
+            if (isdigit(*n)) {
+                *Metaph++ = *n;
+                continue;
             }
-            else
+
+            /* Drop duplicates except for CC    */
+            if (*(n - 1) == *n && *n != 'C')
+                continue;
+
+            /* Check for F J L M N R  or first letter vowel */
+
+            if (same(*n) || (n == n_start && vowel(*n)))
+                *Metaph++ = *n;
+            else switch (*n)
             {
-                  /* SDE -- special case: copy numbers verbatim */
-                  if (isdigit(*n)) {
+                case 'B':
+                    if (n < n_end || *(n - 1) != 'M')
                         *Metaph++ = *n;
-                        continue;
-                  }
+                    break;
 
-                  /* Drop duplicates except for CC    */
-                  if (*(n - 1) == *n && *n != 'C')
-                        continue;
-
-                  /* Check for F J L M N R  or first letter vowel */
-
-                  if (same(*n) || (n == n_start && vowel(*n)))
-                        *Metaph++ = *n;
-                  else switch (*n)
-                  {
-                  case 'B':
-                        if (n < n_end || *(n - 1) != 'M')
-                              *Metaph++ = *n;
-                        break;
-
-                  case 'C':
-                        if (*(n - 1) != 'S' || !frontv(*(n + 1)))
-                        {
-                              if ('I' == *(n + 1) && 'A' == *(n + 2))
-                                    *Metaph++ = 'X';
-                              else if (frontv(*(n + 1)))
-                                    *Metaph++ = 'S';
-                              else if ('H' == *(n + 1))
-                                    *Metaph++ = ((n == n_start &&
-                                          !vowel(*(n + 2))) ||
-                                          'S' == *(n - 1)) ? 'K' : 'X';
-                              else  *Metaph++ = 'K';
-                        }
-                        break;
-
-                  case 'D':
-                        *Metaph++ = ('G' == *(n + 1) && frontv(*(n + 2))) ?
-                              'J' : 'T';
-                        break;
-
-                  case 'G':
-                        if ((*(n + 1) != 'H' || vowel(*(n + 2))) &&
-                              (*(n + 1) != 'N' || ((n + 1) < n_end &&
-                              (*(n + 2) != 'E' || *(n + 3) != 'D'))) &&
-                              (*(n - 1) != 'D' || !frontv(*(n + 1))))
-                        {
-                              *Metaph++ = (frontv(*(n + 1)) &&
-                                    *(n + 2) != 'G') ? 'J' : 'K';
-                        }
-                        else if ('H' == *(n + 1) && !noghf(*(n - 3)) &&
-                              *(n - 4) != 'H')
-                        {
-                              *Metaph++ = 'F';
-                        }
-                        break;
-
-                  case 'H':
-                        if (!varson(*(n - 1)) && (!vowel(*(n - 1)) ||
-                              vowel(*(n + 1))))
-                        {
-                              *Metaph++ = 'H';
-                        }
-                        break;
-
-                  case 'K':
-                        if (*(n - 1) != 'C')
-                              *Metaph++ = 'K';
-                        break;
-
-                  case 'P':
-                        *Metaph++ = ('H' == *(n + 1)) ? 'F' : 'P';
-                        break;
-
-                  case 'Q':
-                        *Metaph++ = 'K';
-                        break;
-
-                  case 'S':
-                        *Metaph++ = ('H' == *(n + 1) || ('I' == *(n + 1) &&
-                              ('O' == *(n + 2) || 'A' == *(n + 2)))) ?
-                              'X' : 'S';
-                        break;
-
-                  case 'T':
-                        if ('I' == *(n + 1) && ('O' == *(n + 2) ||
-                              'A' == *(n + 2)))
-                        {
-                              *Metaph++ = 'X';
-                        }
+                case 'C':
+                    if (*(n - 1) != 'S' || !frontv(*(n + 1)))
+                    {
+                        if ('I' == *(n + 1) && 'A' == *(n + 2))
+                            *Metaph++ = 'X';
+                        else if (frontv(*(n + 1)))
+                            *Metaph++ = 'S';
                         else if ('H' == *(n + 1))
-                              *Metaph++ = 'O';
-                        else if (*(n + 1) != 'C' || *(n + 2) != 'H')
-                              *Metaph++ = 'T';
-                        break;
+                            *Metaph++ = ((n == n_start &&
+                                        !vowel(*(n + 2))) ||
+                                    'S' == *(n - 1)) ? 'K' : 'X';
+                        else  *Metaph++ = 'K';
+                    }
+                    break;
 
-                  case 'V':
+                case 'D':
+                    *Metaph++ = ('G' == *(n + 1) && frontv(*(n + 2))) ?
+                        'J' : 'T';
+                    break;
+
+                case 'G':
+                    if ((*(n + 1) != 'H' || vowel(*(n + 2))) &&
+                            (*(n + 1) != 'N' || ((n + 1) < n_end &&
+                                                 (*(n + 2) != 'E' || *(n + 3) != 'D'))) &&
+                            (*(n - 1) != 'D' || !frontv(*(n + 1))))
+                    {
+                        *Metaph++ = (frontv(*(n + 1)) &&
+                                *(n + 2) != 'G') ? 'J' : 'K';
+                    }
+                    else if ('H' == *(n + 1) && !noghf(*(n - 3)) &&
+                            *(n - 4) != 'H')
+                    {
                         *Metaph++ = 'F';
-                        break;
+                    }
+                    break;
 
-                  case 'W':
-                  case 'Y':
-                        if (vowel(*(n + 1)))
-                              *Metaph++ = *n;
-                        break;
+                case 'H':
+                    if (!varson(*(n - 1)) && (!vowel(*(n - 1)) ||
+                                vowel(*(n + 1))))
+                    {
+                        *Metaph++ = 'H';
+                    }
+                    break;
 
-                  case 'X':
-                        if (n == n_start)
-                              *Metaph++ = 'S';
-                        else
-                        {
-                              *Metaph++ = 'K';
-                              KSflag = 1;
-                        }
-                        break;
+                case 'K':
+                    if (*(n - 1) != 'C')
+                        *Metaph++ = 'K';
+                    break;
 
-                  case 'Z':
+                case 'P':
+                    *Metaph++ = ('H' == *(n + 1)) ? 'F' : 'P';
+                    break;
+
+                case 'Q':
+                    *Metaph++ = 'K';
+                    break;
+
+                case 'S':
+                    *Metaph++ = ('H' == *(n + 1) || ('I' == *(n + 1) &&
+                                ('O' == *(n + 2) || 'A' == *(n + 2)))) ?
+                        'X' : 'S';
+                    break;
+
+                case 'T':
+                    if ('I' == *(n + 1) && ('O' == *(n + 2) ||
+                                'A' == *(n + 2)))
+                    {
+                        *Metaph++ = 'X';
+                    }
+                    else if ('H' == *(n + 1))
+                        *Metaph++ = 'O';
+                    else if (*(n + 1) != 'C' || *(n + 2) != 'H')
+                        *Metaph++ = 'T';
+                    break;
+
+                case 'V':
+                    *Metaph++ = 'F';
+                    break;
+
+                case 'W':
+                case 'Y':
+                    if (vowel(*(n + 1)))
+                        *Metaph++ = *n;
+                    break;
+
+                case 'X':
+                    if (n == n_start)
                         *Metaph++ = 'S';
-                        break;
-                  }
-            }
-      }
+                    else
+                    {
+                        *Metaph++ = 'K';
+                        KSflag = 1;
+                    }
+                    break;
 
-      *Metaph = '\0';
-      free(ntrans);
-      return strlen(metaph_start);
+                case 'Z':
+                    *Metaph++ = 'S';
+                    break;
+            }
+        }
+    }
+
+    /* SDE: special case: if word consists solely of W or Y, use that. */
+    if (Metaph == metaph_start && leading_semivowel)
+        *Metaph++ = leading_semivowel;
+
+    *Metaph = '\0';
+    free(ntrans);
+    return strlen(metaph_start);
 }
 

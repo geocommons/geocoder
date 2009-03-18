@@ -2,7 +2,37 @@ require 'rubygems'
 require 'sqlite3'
 require 'set'
 require 'text'
-require 'geocoder/us/address'
+
+module Text::Metaphone
+  # this is here because we need to modify the metaphone algo
+  # to handle numbers and other special cases according to 
+  # own rules... and we don't want to preserve whitespace in 
+  # input strings...
+  def metaphone(w, options={})
+    # SDE -- Normalise case and remove non-alphanumerics
+    s = w.downcase.gsub(/[^a-z0-9]/o, '')
+    # SDE -- return just leading numbers to deal with cardinal suffixes
+    leading_digits = /^\d+/o.match s
+    if leading_digits
+      return leading_digits[0]
+    end
+    # Apply the Metaphone rules
+    #rules = options[:buggy] ? Rules::BUGGY : Rules::STANDARD
+    rules = Rules::BUGGY # SDE -- I'm pretty sure we want these
+                         # for compat with the sqlite3 helper
+    rules.each { |rx, rep| s.gsub!(rx, rep) }
+    # SDE -- return W or Y if a word starts with that and
+    # metaphones to nothing
+    if s.empty?
+      leading_semivowel = /^\W*([wy])/io.match w
+      return leading_semivowel[0].upcase
+    end
+    return s.upcase
+  end
+end
+
+module Geocoder
+end
 
 module Geocoder::US
   class Database
@@ -36,15 +66,7 @@ module Geocoder::US
     end
 
     def metaphone (txt, max_phones=5)
-      # argh, Text::Metaphone doesn't remove \W chars
-      txt = txt.gsub /[^a-z0-9]/io, ""
-      # TODO: deal with non-leading digits
-      leading_digits = /^\d+/o.match txt
-      if leading_digits
-        leading_digits[0]
-      else
-        Text::Metaphone.metaphone(txt)[0...max_phones]
-      end
+      Text::Metaphone.metaphone(txt)[0...max_phones]
     end
 
     def execute (st, *params)
