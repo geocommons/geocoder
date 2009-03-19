@@ -81,6 +81,11 @@ module Geocoder::US
       execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city,5)
     end
 
+    def places_by_city_or_zip (city, zip)
+      execute("SELECT * FROM place WHERE zip = ? or city_phone = ?",
+                  zip, metaphone(city,5))
+    end
+
     def candidate_records (number, name, zips)
       in_list = placeholders_for zips
       sql = "SELECT feature.*, range.* FROM feature, range
@@ -261,11 +266,8 @@ module Geocoder::US
       # lookup.rst (1)
       places = []
 
-      # lookup.rst (2)
-      places += places_by_zip query["zip"] if query["zip"] 
-
-      # lookup.rst (3)
-      places += places_by_city query["city"] if query["city"]
+      # lookup.rst (2) and (3) together -- index does fine
+      places = places_by_city_or_zip query["city"], query["zip"]
 
       # lookup.rst (4)
       zips = unique_values places, "zip"
@@ -274,9 +276,10 @@ module Geocoder::US
       candidates = candidate_records query["number"], query["name"], zips
      
       # lookup.rst (6)
-      if candidates.empty?
-        candidates = more_candidate_records query["number"], query["name"] 
-      end
+      # -- this takes too long for certain streets...
+      # if candidates.empty?
+      #  candidates = more_candidate_records query["number"], query["name"] 
+      # end
 
       return [] if candidates.empty?
 
