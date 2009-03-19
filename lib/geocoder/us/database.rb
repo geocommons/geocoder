@@ -93,7 +93,8 @@ module Geocoder::US
                AND feature.zip IN (#{in_list})
                AND range.tlid = feature.tlid
                AND range.zip = feature.zip
-               AND fromhn <= ? AND tohn >= ?"
+               AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
+                OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       params = [metaphone(name,5)] + zips + [number, number]
       execute sql, *params
     end
@@ -104,7 +105,8 @@ module Geocoder::US
           WHERE name_phone = ?
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
-          AND fromhn <= ? AND tohn >= ?;
+          AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
+           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       SQL
       execute sql, metaphone(name,5), number, number
     end
@@ -124,7 +126,9 @@ module Geocoder::US
 
     def all_ranges (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = "SELECT * FROM range WHERE range.tlid IN (#{in_list});"
+      sql = "SELECT * FROM range
+              WHERE range.tlid IN (#{in_list})
+              ORDER BY fromhn ASC;"
       execute sql, *edge_ids
     end
 
@@ -194,14 +198,14 @@ module Geocoder::US
 
     def ranges_for_record (ranges, record)
       key = record.values_at("tlid")
-      ranges[key].select {|r| r["side"] == record["side"]} \
-                 .sort {|a,b| a["fromhn"] <=> b["fromhn"]}
+      ranges[key].select {|r| r["side"] == record["side"]}
     end
 
     def interpolation_distance (number, ranges)
       interval = total = 0
       for range in ranges
         fromhn, tohn = range["fromhn"].to_i, range["tohn"].to_i
+        fromhn, tohn = tohn, fromhn if fromhn > tohn
         total += tohn - fromhn
         if fromhn > number
           interval += tohn - fromhn
@@ -225,7 +229,7 @@ module Geocoder::US
       # an approximation in place of lookup.rst (10e) and (10g)
       # = scale longitude distances by the cosine of the latitude
       # (or, actually, the mean of two latitudes)
-      # is this even necessary?
+      # -- is this even necessary?
       Math.cos((lat1+lat2) / 2 * Math::PI / 180)
     end
 
