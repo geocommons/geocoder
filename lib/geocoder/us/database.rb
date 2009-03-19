@@ -35,13 +35,15 @@ module Geocoder::US
       (["?"] * list.length).join(",")
     end
 
-    def metaphone (txt)
+    def metaphone (txt, max_phones=5)
+      # argh, Text::Metaphone doesn't remove \W chars
+      txt = txt.gsub /[^a-z0-9]/io, ""
       # TODO: deal with non-leading digits
-      leading_digits = /^\d+/.match txt
+      leading_digits = /^\d+/o.match txt
       if leading_digits
         leading_digits[0]
       else
-        Text::Metaphone.metaphone(txt)[0..4]
+        Text::Metaphone.metaphone(txt)[0...max_phones]
       end
     end
 
@@ -54,7 +56,7 @@ module Geocoder::US
     end
 
     def places_by_city (city)
-      execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city)
+      execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city,5)
     end
 
     def candidate_records (number, name, zips)
@@ -63,8 +65,9 @@ module Geocoder::US
                WHERE name_phone = ?
                AND feature.zip IN (#{in_list})
                AND range.tlid = feature.tlid
+               AND range.zip = feature.zip
                AND fromhn <= ? AND tohn >= ?"
-      params = [metaphone(name)] + zips + [number, number]
+      params = [metaphone(name,5)] + zips + [number, number]
       execute sql, *params
     end
 
@@ -73,15 +76,21 @@ module Geocoder::US
         SELECT feature.*, range.* FROM feature, range
           WHERE name_phone = ?
           AND range.tlid = feature.tlid
+          AND range.zip = feature.zip
           AND fromhn <= ? AND tohn >= ?;
       SQL
-      execute sql, metaphone(name), number, number
+      execute sql, metaphone(name,5), number, number
     end
 
     def primary_records (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = "SELECT feature.*, edge.* FROM feature, edge
+      # TODO: the DISTINCT is needed because some TLIDs get duplicated
+      # in the edge table... the right way to fix this is to remove
+      # them after import; sigh
+      sql = "SELECT DISTINCT feature.*, edge.*
+               FROM feature, edge
                WHERE feature.tlid IN (#{in_list})
+               AND paflag = 'P'
                AND edge.tlid = feature.tlid;"
       execute sql, *edge_ids
     end
@@ -102,17 +111,18 @@ module Geocoder::US
       rows.map {|r| r[key]}.to_set.to_a
     end
 
-    def rows_to_h (rows, key)
+    def rows_to_h (rows, *keys)
       hash = {}
-      rows.each {|row| (hash[row[key]] ||= []) << row; }
+      rows.each {|row| (hash[row.values_at(*keys)] ||= []) << row; }
       hash
     end
 
-    def merge_rows! (dest, src, key)
-      src = rows_to_h src, key
+    def merge_rows! (dest, src, *keys)
+      src = rows_to_h src, *keys
       dest.map! {|row|
-        if src.key? row[key] 
-          src[row[key]].map {|row2| row.merge row2}
+        vals = row.values_at(*keys)
+        if src.key? vals
+          src[vals].map {|row2| row.merge row2}
         else
           [row]
         end
@@ -123,14 +133,28 @@ module Geocoder::US
     def score_candidates! (query, candidates)
       for candidate in candidates
         score = 0
-        # lookup.rst (7a)
-        query.keys.each {|k| score += 1 if query[k] == candidate[k]}
-        # lookup.rst (7b)
-        # TODO: implement me
+        compare = query.keys.compact
+        compare.each {|k| 
+          next if candidate[k].nil?
+          # lowercase and eliminate non-word chars before comparison
+          a, b = [query,candidate].map{|x| x[k].downcase.gsub(/\W/o, "")}
+          if a == b
+            # lookup.rst (7a)
+            score += 1 
+          else
+            # lookup.rst (7b)
+            distance = Text::Levenshtein.distance(a,b)
+            score += 1 - distance.to_f / [a.length,b.length].max
+          end
+        }
+
         # lookup.rst (7c)
+        # N.B. query includes "number" which will never match so
+        # we test separately for parity
         score += 1  if candidate["fromhn"].to_i % 2 == query["number"].to_i % 2
+
         # lookup.rst (7d)
-        candidate["score"] = score.to_f / query.keys.length
+        candidate["score"] = score.to_f / compare.length
       end
     end
 
@@ -141,8 +165,9 @@ module Geocoder::US
     end
 
     def ranges_for_record (ranges, record)
-      ranges[record["tlid"]].select {|r| r["side"] == record["side"]} \
-                            .sort {|a,b| a["fromhn"] <=> b["fromhn"]}
+      key = record.values_at("tlid")
+      ranges[key].select {|r| r["side"] == record["side"]} \
+                 .sort {|a,b| a["fromhn"] <=> b["fromhn"]}
     end
 
     def interpolation_distance (number, ranges)
@@ -164,7 +189,7 @@ module Geocoder::US
       coords = geom.unpack "V*" # little-endian 4-byte long ints
       # now map them into signed floats
       coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
-      coords.each_slice(2) {|x,y| points << [x,y]}
+      points << [coords.shift, coords.shift] until coords.empty?
       points
     end
 
@@ -232,7 +257,7 @@ module Geocoder::US
 
       return [] if candidates.empty?
 
-      # TODO: need to join up places and candidates here
+      # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, "zip"
   
       # lookup.rst (7)
@@ -246,7 +271,7 @@ module Geocoder::US
       records  = primary_records edge_ids
 
       # lookup.rst (10a) 
-      merge_rows! candidates, records, "tlid"
+      merge_rows! candidates, records, "tlid", "zip"
 
       # lookup.rst (10b)
       ranges  = rows_to_h all_ranges(edge_ids), "tlid"
