@@ -1,12 +1,33 @@
+require 'set'
+
 module Geocoder
 end
 
 module Geocoder::US
-end
+  class Map < Hash
+    attr_accessor :partial
+    def self.[] (*items)
+      hash = super(*items)
+      hash.build_partial
+      hash.keys.each {|k| hash[k.downcase] = hash[k]}
+      hash.freeze
+    end
+    def build_partial
+      @partial = Set.new()
+      [keys, values].flatten.each {|item|
+        tokens = item.downcase.split
+        tokens.each_index {|i|
+          @partial << tokens[0..i].join(" ")
+        }
+      }
+    end
+    def partial? (key)
+      @partial.member? key
+    end 
+  end
 
-module Geocoder::US::Address
   # 2008 TIGER/Line technical documentation Appendix C
-  Directional = {
+  Directional = Map[
     "North"	=> "N",
     "South"	=> "S",
     "East"	=> "E",
@@ -23,10 +44,10 @@ module Geocoder::US::Address
     "Noroeste"	=> "NO",
     "Sudeste"	=> "SE",
     "Sudoeste"	=> "SO"
-  }
+  ]
 
   # 2008 TIGER/Line technical documentation Appendix D
-  Pre_Qualifier = {
+  Pre_Qualifier = Map[
     "Alternate"	=> "Alt",
     "Business"	=> "Bus",
     "Bypass"	=> "Byp",
@@ -37,10 +58,10 @@ module Geocoder::US::Address
     "Private"	=> "Pvt",
     "Public"	=> "Pub",
     "Spur"	=> "Spr",
-  }
+  ]
 
   # 2008 TIGER/Line technical documentation Appendix D
-  Suf_Qualifier => {
+  Suf_Qualifier = [
     "Access"	=> "Acc",
     "Alternate"	=> "Alt",
     "Business"	=> "Bus",
@@ -56,11 +77,11 @@ module Geocoder::US::Address
     "Ramp"	=> "Rmp",
     "Underpass"	=> "Unp",
     "Overpass"	=> "Ovp",
-  }
+  ]
 
   # subset of 2008 TIGER/Line technical documentation Appendix E
   # extracted from TIGER/Line database import
-  Pre_Types = {
+  Pre_Type = Map[
     "Arcade"                            => "Arc",
     "Autopista"                         => "Autopista",
     "Avenida"                           => "Ave",
@@ -160,11 +181,11 @@ module Geocoder::US::Address
     "Vereda"                            => "Ver",
     "Via"                               => "Via",
     "Vista"                             => "Vis",
-  }
+  ]
 
   # subset of 2008 TIGER/Line technical documentation Appendix E
   # extracted from TIGER/Line database import
-  Suf_Types = {
+  Suf_Type = Map[
     "Alley"                             => "Aly",
     "Arcade"                            => "Arc",
     "Avenida"                           => "Ave",
@@ -246,9 +267,36 @@ module Geocoder::US::Address
     "Walk"                              => "Walk",
     "Walkway"                           => "Walkway",
     "Way"                               => "Way",
-  }
+  ]
 
-  States = {
+  # http://www.usps.com/ncsc/lookups/abbr_sud.txt
+  Unit_Type = Map[
+    "Apartment"	=> "Apt",
+    "Basement"	=> "Bsmt",
+    "Building"	=> "Bldg",
+    "Department"=> "Dept",
+    "Floor"	=> "Fl",
+    "Front"	=> "Frnt",
+    "Hangar"	=> "Hngr",
+    "Lobby"	=> "Lbby",
+    "Lot"	=> "Lot",
+    "Lower"	=> "Lowr",
+    "Office"	=> "Ofc",
+    "Penthouse"	=> "Ph",
+    "Pier"	=> "Pier",
+    "Rear"	=> "Rear",
+    "Room"	=> "Rm",
+    "Side"	=> "Side",
+    "Slip"	=> "Slip",
+    "Space"	=> "Spc",
+    "Stop"	=> "Stop",
+    "Suite"	=> "Ste",
+    "Trailer"	=> "Trlr",
+    "Unit"	=> "Unit",
+    "Upper"	=> "Uppr",
+  ]
+
+  State = Map[
     "Alabama"		=> "AL",
     "Alaska"		=> "AK",
     "American Samoa"	=> "AS",
@@ -308,5 +356,5 @@ module Geocoder::US::Address
     "West Virginia"	=> "WV",
     "Wisconsin"		=> "WI",
     "Wyoming"		=> "WY"
-  }
+  ]
 end
