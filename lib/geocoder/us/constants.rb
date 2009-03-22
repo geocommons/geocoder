@@ -9,7 +9,7 @@ module Geocoder::US
     def self.[] (*items)
       hash = super(*items)
       hash.build_partial
-      hash.keys.each {|k| hash[k.downcase] = hash[k]}
+      hash.keys.each {|k| hash[k.downcase] = hash.fetch(k)}
       hash.values.each {|v| hash[v.downcase] = v}
       hash.freeze
     end
