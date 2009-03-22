@@ -10,6 +10,7 @@ module Geocoder::US
       hash = super(*items)
       hash.build_partial
       hash.keys.each {|k| hash[k.downcase] = hash[k]}
+      hash.values.each {|v| hash[v.downcase] = v}
       hash.freeze
     end
     def build_partial
@@ -22,8 +23,14 @@ module Geocoder::US
       }
     end
     def partial? (key)
-      @partial.member? key
+      @partial.member? key.downcase
     end 
+    def key? (key)
+      super(key.downcase)
+    end
+    def [] (key)
+      super(key.downcase)
+    end
   end
 
   # 2008 TIGER/Line technical documentation Appendix C
@@ -47,7 +54,7 @@ module Geocoder::US
   ]
 
   # 2008 TIGER/Line technical documentation Appendix D
-  Pre_Qualifier = Map[
+  Prefix_Qualifier = Map[
     "Alternate"	=> "Alt",
     "Business"	=> "Bus",
     "Bypass"	=> "Byp",
@@ -61,7 +68,7 @@ module Geocoder::US
   ]
 
   # 2008 TIGER/Line technical documentation Appendix D
-  Suf_Qualifier = [
+  Suffix_Qualifier = Map[
     "Access"	=> "Acc",
     "Alternate"	=> "Alt",
     "Business"	=> "Bus",
@@ -81,7 +88,7 @@ module Geocoder::US
 
   # subset of 2008 TIGER/Line technical documentation Appendix E
   # extracted from TIGER/Line database import
-  Pre_Type = Map[
+  Prefix_Canonical = {
     "Arcade"                            => "Arc",
     "Autopista"                         => "Autopista",
     "Avenida"                           => "Ave",
@@ -181,11 +188,59 @@ module Geocoder::US
     "Vereda"                            => "Ver",
     "Via"                               => "Via",
     "Vista"                             => "Vis",
-  ]
+  }
+
+  # merged from http://www.usps.com/ncsc/lookups/abbr_suffix.txt
+  Prefix_Alternate = {
+    "Av"			=> "Ave",
+    "Aven"			=> "Ave",
+    "Avenu"			=> "Ave",
+    "Avenue"			=> "Ave",
+    "Avn"			=> "Ave",
+    "Avnue"			=> "Ave",
+    "Boul"			=> "Blvd",
+    "Boulv"			=> "Blvd",
+    "Bypa"			=> "Byp",
+    "Bypas"			=> "Byp",
+    "Byps"			=> "Byp",
+    "Crt"			=> "Ct",
+    "Exp"			=> "Expy",
+    "Expr"			=> "Expy",
+    "Express"			=> "Expy",
+    "Expw"			=> "Expy",
+    "Highwy"			=> "Hwy",
+    "Hiway"			=> "Hwy",
+    "Hiwy"			=> "Hwy",
+    "Hway"			=> "Hwy",
+    "La"			=> "Ln",
+    "Lanes"			=> "Ln",
+    "Loops"			=> "Loop",
+    "Plza"			=> "Plz",
+    "Sqr"			=> "Sq",
+    "Sqre"			=> "Sq",
+    "Squ"			=> "Sq",
+    "Terr"			=> "Ter",
+    "Tr"			=> "Trl",
+    "Trails"			=> "Trl",
+    "Trls"			=> "Trl",
+    "Tunel"			=> "Tunl",
+    "Tunls"			=> "Tunl",
+    "Tunnels"			=> "Tunl",
+    "Tunnl"			=> "Tunl",
+    "Vdct"			=> "Via",
+    "Viadct"			=> "Via",
+    "Viaduct"			=> "Via",
+    "Vist"			=> "Vis",
+    "Vst"			=> "Vis",
+    "Vsta"			=> "Vis"
+  }
+  
+  # Canonical abbreviations + USPS accepted alternates
+  Prefix_Type = Map[ Prefix_Canonical.merge Prefix_Alternate ]
 
   # subset of 2008 TIGER/Line technical documentation Appendix E
   # extracted from TIGER/Line database import
-  Suf_Type = Map[
+  Suffix_Canonical = {
     "Alley"                             => "Aly",
     "Arcade"                            => "Arc",
     "Avenida"                           => "Ave",
@@ -267,7 +322,102 @@ module Geocoder::US
     "Walk"                              => "Walk",
     "Walkway"                           => "Walkway",
     "Way"                               => "Way",
-  ]
+  }
+  
+  # merged from http://www.usps.com/ncsc/lookups/abbr_suffix.txt
+  Suffix_Alternate = {
+    "Allee"			=> "Aly",
+    "Ally"			=> "Aly",
+    "Av"			=> "Ave",
+    "Aven"			=> "Ave",
+    "Avenu"			=> "Ave",
+    "Avenue"			=> "Ave",
+    "Avn"			=> "Ave",
+    "Avnue"			=> "Ave",
+    "Boul"			=> "Blvd",
+    "Boulv"			=> "Blvd",
+    "Brdge"			=> "Brg",
+    "Bypa"			=> "Byp",
+    "Bypas"			=> "Byp",
+    "Byps"			=> "Byp",
+    "Causway"			=> "Cswy",
+    "Circ"			=> "Cir",
+    "Circl"			=> "Cir",
+    "Crcl"			=> "Cir",
+    "Crcle"			=> "Cir",
+    "Crecent"			=> "Cres",
+    "Cresent"			=> "Cres",
+    "Crscnt"			=> "Cres",
+    "Crsent"			=> "Cres",
+    "Crsnt"			=> "Cres",
+    "Crssing"			=> "Xing",
+    "Crssng"			=> "Xing",
+    "Crt"			=> "Ct",
+    "Driv"			=> "Dr",
+    "Drv"			=> "Dr",
+    "Exp"			=> "Expy",
+    "Expr"			=> "Expy",
+    "Express"			=> "Expy",
+    "Expw"			=> "Expy",
+    "Freewy"			=> "Fwy",
+    "Frway"			=> "Fwy",
+    "Frwy"			=> "Fwy",
+    "Height"			=> "Hts",
+    "Hgts"			=> "Hts",
+    "Highwy"			=> "Hwy",
+    "Hiway"			=> "Hwy",
+    "Hiwy"			=> "Hwy",
+    "Ht"			=> "Hts",
+    "Hway"			=> "Hwy",
+    "La"			=> "Ln",
+    "Lanes"			=> "Ln",
+    "Lndng"			=> "Lndg",
+    "Loops"			=> "Loop",
+    "Ovl"			=> "Oval",
+    "Parkways"			=> "Pkwy",
+    "Parkwy"			=> "Pkwy",
+    "Paths"			=> "Path",
+    "Pikes"			=> "Pike",
+    "Pkway"			=> "Pkwy",
+    "Pkwys"			=> "Pkwy",
+    "Pky"			=> "Pkwy",
+    "Plza"			=> "Plz",
+    "Rivr"			=> "Riv",
+    "Rvr"			=> "Riv",
+    "Spurs"			=> "Spur",
+    "Sqr"			=> "Sq",
+    "Sqre"			=> "Sq",
+    "Squ"			=> "Sq",
+    "Str"			=> "St",
+    "Strav"			=> "Stra",
+    "Strave"			=> "Stra",
+    "Straven"			=> "Stra",
+    "Stravn"			=> "Stra",
+    "Strt"			=> "St",
+    "Strvn"			=> "Stra",
+    "Strvnue"			=> "Stra",
+    "Terr"			=> "Ter",
+    "Tpk"			=> "Tpke",
+    "Tr"			=> "Trl",
+    "Traces"			=> "Trce",
+    "Trails"			=> "Trl",
+    "Trls"			=> "Trl",
+    "Trnpk"			=> "Tpke",
+    "Trpk"			=> "Tpke",
+    "Tunel"			=> "Tunl",
+    "Tunls"			=> "Tunl",
+    "Tunnels"			=> "Tunl",
+    "Tunnl"			=> "Tunl",
+    "Turnpk"			=> "Tpke",
+    "Vist"			=> "Vis",
+    "Vst"			=> "Vis",
+    "Vsta"			=> "Vis",
+    "Walks"			=> "Walk",
+    "Wy"			=> "Way",
+  }
+
+  # Canonical abbreviations + USPS accepted alternates
+  Suffix_Type = Map[ Suffix_Canonical.merge Suffix_Alternate ]
 
   # http://www.usps.com/ncsc/lookups/abbr_sud.txt
   Unit_Type = Map[

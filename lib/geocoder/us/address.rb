@@ -7,11 +7,11 @@ module Geocoder::US
     [:sufnum,   nil],
     [:fraction, /^\d+\/\d+/o],
     [:predir,   Directional],
-    [:prequal,  Pre_Qualifier],
-    [:pretyp,   Pre_Type],
+    [:prequal,  Prefix_Qualifier],
+    [:pretyp,   Prefix_Type],
     [:street,   /^[\w\.\-]+(?: [\w\.\-]+){0,4}$/o],
-    [:suftyp,   Suf_Type],
-    [:sufqual,  Suf_Qualifier],
+    [:suftyp,   Suffix_Type],
+    [:sufqual,  Suffix_Qualifier],
     [:sufdir,   Directional],
     [:unittyp,  Unit_Type],
     [:unit,     lambda {|p, tok| p[:unittyp].any? and tok =~ /^\S+$/o}],
@@ -36,19 +36,14 @@ module Geocoder::US
       Fields[Field_Index[@state]...Fields.length]
     end
     def next_state!
-      return nil if @state.nil?
-      current = Field_Index[@state]
-      if current.nil? or current + 1 >= Fields.length
-        @state = nil
-      elsif
-        @state = Fields[current + 1][0]
-      end
+      @state = remaining_states[1]
+    end
+    def clean (value)
+      value.gsub(/[^a-z0-9 '#-]+/io, "")
     end
     def test? (match, value)
       if match.respond_to? "partial?"
-        match.partial? value.gsub(/[^\w ]+/o, "").downcase
-      elsif match.respond_to? "key?"
-        match.key? value.gsub(/[^\w ]+/o, "").downcase
+        match.partial? value
       elsif match.respond_to? "match"
         match.match value
       elsif match.respond_to? "call"
@@ -57,13 +52,11 @@ module Geocoder::US
         false
       end
     end
-    def score
-      select {|k,v| v != ""}.length - penalty
-    end
     def substitute!
       for field, match, groups in Fields
+        next if fetch(field).empty?
         if match.respond_to? "key?"
-          value = fetch(field).gsub(/[^\w ]/o, "").downcase
+          value = fetch(field)
           store field, match[value] if match.key? value
         elsif match.is_a? Regexp and not groups.nil?
           submatch = fetch(field).scan(match)[0]
@@ -73,31 +66,31 @@ module Geocoder::US
         end
       end
     end
+    def score
+      select {|k,v| v != ""}.length - penalty
+    end
   end
 
   class Address
     attr :text
    
-    def initialize (text, max_penalty=1)
+    def initialize (text)
       @text = text
-      @max_penalty = max_penalty
     end
 
     def tokens
-      @text.split /(,)?\s+/o
+      @text.split(/(,)?\s+/o).map{|token| clean token} 
     end
 
-    def parse_token (stack, token)
+    def parse_token (stack, token, max_penalty)
       return stack if token.empty?
-      print "token: ", token, " "
       if token == ","
         stack.each {|parse| parse.next_state!}
-        print stack.length, "\n";
         return stack
       end
       output = []
       for parse in stack
-        if parse.penalty < @max_penalty
+        if parse.penalty < max_penalty
           no_parse = parse.clone
           no_parse.penalty += 1
           output << no_parse
@@ -116,14 +109,13 @@ module Geocoder::US
           end
         end
       end
-      print output.length, "\n";
       output
     end
 
-    def parse
+    def parse (max_penalty=0, cutoff=10)
       stack = [Parse.new()]
       tokens.each {|token|
-        stack = parse_token stack[0..10], token
+        stack = parse_token stack[0...cutoff], token, max_penalty
         stack.sort! {|a,b| b.score <=> a.score}
       }
       stack.each {|parse| parse.substitute!}
