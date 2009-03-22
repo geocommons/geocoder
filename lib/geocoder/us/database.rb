@@ -3,6 +3,8 @@ require 'sqlite3'
 require 'set'
 require 'text'
 
+require 'geocoder/us/address'
+
 module Text::Metaphone
   # this is here because we need to modify the metaphone algo
   # to handle numbers and other special cases according to 
@@ -272,7 +274,7 @@ module Geocoder::US
            :city_phone, :fromhn, :tohn, :paflag].include? k}
     end
 
-    def geocode (query)
+    def geocode_address (query)
       # lookup.rst (1)
       places = []
 
@@ -330,6 +332,15 @@ module Geocoder::US
       # lookup.rst (12)
       candidates.each {|record| clean_row! record}
       candidates
+    end
+
+    def geocode (string, max_penalty=0, cutoff=10)
+      addr = Address.new string
+      for query in addr.parse(max_penalty, cutoff)
+        results = geocode_address query
+        return results if results.any?
+      end
+      return []
     end
   end
 end

@@ -118,8 +118,8 @@ module Geocoder::US
         stack = parse_token stack[0...cutoff], token, max_penalty
         stack.sort! {|a,b| b.score <=> a.score}
       }
+      stack = stack[0...cutoff]
       stack.each {|parse| parse.substitute!}
-      stack
     end
   end
 end
