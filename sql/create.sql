@@ -9,8 +9,8 @@ CREATE TABLE edge (
   geometry BLOB);
 CREATE TABLE feature (
   tlid INTEGER(10),
-  name VARCHAR(100),
-  name_phone VARCHAR(5),
+  street VARCHAR(100),
+  street_phone VARCHAR(5),
   predir VARCHAR(2),
   pretyp VARCHAR(3),
   prequal VARCHAR(2),
