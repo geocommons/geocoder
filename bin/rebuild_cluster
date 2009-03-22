@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BASE=$(dirname $0)
+SQL="$BASE/../sql"
+
+DATABASE=$1
+OLD_DB=$2
+
+[ -r $DATABASE ] && echo "$DATABASE already exists." && exit -1
+[ ! -r $OLD_DB ] && echo "Can't read $OLD_DB." && exit -1
+
+( cat ${SQL}/create.sql && \
+  echo "ATTACH DATABASE '${OLD_DB}' AS old;" && \
+  cat ${SQL}/cluster.sql && \
+  echo "DETACH DATABASE old;" && \
+  cat ${SQL}/index.sql && \
+  echo "ANALYZE;" ) | sqlite3 $DATABASE
