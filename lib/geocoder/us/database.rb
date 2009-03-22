@@ -20,6 +20,7 @@ module Text::Metaphone
     #rules = options[:buggy] ? Rules::BUGGY : Rules::STANDARD
     rules = Rules::BUGGY # SDE -- I'm pretty sure we want these
                          # for compat with the sqlite3 helper
+    # do the actual metaphone transform
     rules.each { |rx, rep| s.gsub!(rx, rep) }
     # SDE -- return W or Y if a word starts with that and
     # metaphones to nothing
@@ -69,8 +70,13 @@ module Geocoder::US
       Text::Metaphone.metaphone(txt)[0...max_phones]
     end
 
-    def execute (st, *params)
-      prepare(st).execute! *params
+    def execute (sql, *params)
+      st = prepare(sql) 
+      result = st.execute(*params)
+      columns = result.columns.map {|c| c.to_sym}
+      rows = []
+      result.each {|row| rows << Hash[columns.zip(row)]}
+      rows
     end
 
     def places_by_zip (zip)
@@ -86,29 +92,29 @@ module Geocoder::US
                   zip, metaphone(city,5))
     end
 
-    def candidate_records (number, name, zips)
+    def candidate_records (number, street, zips)
       in_list = placeholders_for zips
       sql = "SELECT feature.*, range.* FROM feature, range
-               WHERE name_phone = ?
+               WHERE street_phone = ?
                AND feature.zip IN (#{in_list})
                AND range.tlid = feature.tlid
                AND range.zip = feature.zip
                AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
                 OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
-      params = [metaphone(name,5)] + zips + [number, number]
+      params = [metaphone(street,5)] + zips + [number, number]
       execute sql, *params
     end
 
-    def more_candidate_records (number, name)
+    def more_candidate_records (number, street)
       sql = <<'      SQL'
         SELECT feature.*, range.* FROM feature, range
-          WHERE name_phone = ?
+          WHERE street_phone = ?
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
            OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       SQL
-      execute sql, metaphone(name,5), number, number
+      execute sql, metaphone(street,5), number, number
     end
 
     def primary_records (edge_ids)
@@ -183,28 +189,28 @@ module Geocoder::US
         # lookup.rst (7c)
         # N.B. query includes "number" which will never match so
         # we test separately for parity
-        score += 1  if candidate["fromhn"].to_i % 2 == query["number"].to_i % 2
+        score += 1  if candidate[:fromhn].to_i % 2 == query[:number].to_i % 2
 
         # lookup.rst (7d)
-        candidate["score"] = score.to_f / compare.length
+        candidate[:score] = score.to_f / compare.length
       end
     end
 
     def best_candidates! (candidates)
       # lookup.rst (8)
-      candidates.sort! {|a,b| b["score"] <=> a["score"]}
-      candidates.delete_if {|record| record["score"] < candidates[0]["score"]}
+      candidates.sort! {|a,b| b[:score] <=> a[:score]}
+      candidates.delete_if {|record| record[:score] < candidates[0][:score]}
     end
 
     def ranges_for_record (ranges, record)
-      key = record.values_at("tlid")
-      ranges[key].select {|r| r["side"] == record["side"]}
+      key = record.values_at(:tlid)
+      ranges[key].select {|r| r[:side] == record[:side]}
     end
 
     def interpolation_distance (number, ranges)
       interval = total = 0
       for range in ranges
-        fromhn, tohn = range["fromhn"].to_i, range["tohn"].to_i
+        fromhn, tohn = range[:fromhn].to_i, range[:tohn].to_i
         fromhn, tohn = tohn, fromhn if fromhn > tohn
         total += tohn - fromhn
         if fromhn > number
@@ -262,8 +268,8 @@ module Geocoder::US
 
     def clean_row! (row)
       row.delete_if {|k,v| k.is_a? Fixnum or
-          %w{geometry side tlid name_phone 
-             city_phone fromhn tohn paflag}.include? k}
+          [:geometry, :side, :tlid, :street_phone,
+           :city_phone, :fromhn, :tohn, :paflag].include? k}
     end
 
     def geocode (query)
@@ -271,24 +277,24 @@ module Geocoder::US
       places = []
 
       # lookup.rst (2) and (3) together -- index does fine
-      places = places_by_city_or_zip query["city"], query["zip"]
+      places = places_by_city_or_zip query[:city], query[:zip]
 
       # lookup.rst (4)
-      zips = unique_values places, "zip"
+      zips = unique_values places, :zip
 
       # lookup.rst (5)
-      candidates = candidate_records query["number"], query["name"], zips
+      candidates = candidate_records query[:number], query[:street], zips
      
       # lookup.rst (6)
       # -- this takes too long for certain streets...
       # if candidates.empty?
-      #  candidates = more_candidate_records query["number"], query["name"] 
+      #  candidates = more_candidate_records query[:number], query[:street] 
       # end
 
       return [] if candidates.empty?
 
       # need to join up places and candidates here, for scoring
-      merge_rows! candidates, places, "zip"
+      merge_rows! candidates, places, :zip
   
       # lookup.rst (7)
       score_candidates! query, candidates
@@ -297,29 +303,29 @@ module Geocoder::US
       best_candidates! candidates 
 
       # lookup.rst (9)
-      edge_ids = unique_values candidates, "tlid"
+      edge_ids = unique_values candidates, :tlid
       records  = primary_records edge_ids
 
       # lookup.rst (10a) 
-      merge_rows! candidates, records, "tlid", "zip"
+      merge_rows! candidates, records, :tlid, :zip
 
       # lookup.rst (10b)
-      ranges  = rows_to_h all_ranges(edge_ids), "tlid"
+      ranges  = rows_to_h all_ranges(edge_ids), :tlid
 
       candidates.each {|record|
         # lookup.rst (10c) & (10d)
         side_ranges = ranges_for_record ranges, record
-        dist = interpolation_distance( query["number"].to_i, side_ranges )
+        dist = interpolation_distance( query[:number].to_i, side_ranges )
         # TODO: implement lookup.rst (10e) & (10g) (projection)
         # lookup.rst (10f) & (10h)
-        points = unpack_geometry record["geometry"]
-        record["lon"], record["lat"] = interpolate points, dist
-        record["number"] = query["number"]
+        points = unpack_geometry record[:geometry]
+        record[:lon], record[:lat] = interpolate points, dist
+        record[:number] = query[:number]
       }
 
       # lookup.rst (11)
-      zips = unique_values candidates, "zip"
-      merge_rows! candidates, primary_places(zips), "zip"
+      zips = unique_values candidates, :zip
+      merge_rows! candidates, primary_places(zips), :zip
 
       # lookup.rst (12)
       candidates.each {|record| clean_row! record}
