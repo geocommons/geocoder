@@ -236,7 +236,7 @@ module Geocoder::US
   }
   
   # Canonical abbreviations + USPS accepted alternates
-  Prefix_Type = Map[ Prefix_Canonical.merge Prefix_Alternate ]
+  Prefix_Type = Map[ Prefix_Canonical.merge(Prefix_Alternate) ]
 
   # subset of 2008 TIGER/Line technical documentation Appendix E
   # extracted from TIGER/Line database import
@@ -417,7 +417,7 @@ module Geocoder::US
   }
 
   # Canonical abbreviations + USPS accepted alternates
-  Suffix_Type = Map[ Suffix_Canonical.merge Suffix_Alternate ]
+  Suffix_Type = Map[ Suffix_Canonical.merge(Suffix_Alternate) ]
 
   # http://www.usps.com/ncsc/lookups/abbr_sud.txt
   Unit_Type = Map[

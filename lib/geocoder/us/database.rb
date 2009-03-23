@@ -336,7 +336,7 @@ module Geocoder::US
     def geocode (string, max_penalty=0, cutoff=10)
       addr = Address.new string
       for query in addr.parse(max_penalty, cutoff)
-        next unless query[:street].any? and (query[:zip].any?
+        next unless query[:street].any? and (query[:zip].any? \
                                           or query[:city].any?)
         results = geocode_address query
         return results if results.any?
