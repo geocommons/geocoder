@@ -41,7 +41,6 @@ module Geocoder::US
   class Database
     def initialize (filename, helper="libsqlite3_geocoder.so")
       @db = SQLite3::Database.new( filename )
-      @db.results_as_hash = true
       @st = {}
       tune helper;
     end
@@ -77,7 +76,7 @@ module Geocoder::US
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
       rows = []
-      result.each {|row| rows << Hash[columns.zip(row)]}
+      result.each {|row| rows << Hash[*(columns.zip(row).flatten)]}
       rows
     end
 
@@ -194,7 +193,7 @@ module Geocoder::US
         score += 1  if candidate[:fromhn].to_i % 2 == query[:number].to_i % 2
 
         # lookup.rst (7d)
-        candidate[:score] = score.to_f / compare.length
+        candidate[:score] = format("%.3f",score.to_f / compare.length).to_f
       end
     end
 
@@ -337,6 +336,8 @@ module Geocoder::US
     def geocode (string, max_penalty=0, cutoff=10)
       addr = Address.new string
       for query in addr.parse(max_penalty, cutoff)
+        next unless query[:street].any? and (query[:zip].any?
+                                          or query[:city].any?)
         results = geocode_address query
         return results if results.any?
       end

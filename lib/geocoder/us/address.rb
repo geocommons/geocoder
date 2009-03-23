@@ -20,13 +20,13 @@ module Geocoder::US
     [:zip,      /^(\d{5})(?:-(\d{4}))?$/o, [:zip,:plus4]],
     [:plus4,    nil]
   ]
-  Field_Index = Hash[(0...Fields.length).map {|i| [Fields[i][0],i]}]
+  Field_Index = Hash[*((0...Fields.length).map {|i| [Fields[i][0],i]}.flatten)]
 
   class Parse < Hash
     attr_accessor :state
     attr_accessor :penalty
     def self.new
-      parse = self[Fields.map {|f,m| [f,""]}]
+      parse = self[*(Fields.map {|f,m| [f,""]}.flatten)]
       parse.state   = :number
       parse.penalty = 0
       parse
@@ -37,9 +37,6 @@ module Geocoder::US
     end
     def next_state!
       @state = remaining_states[1]
-    end
-    def clean (value)
-      value.gsub(/[^a-z0-9 '#-]+/io, "")
     end
     def test? (match, value)
       if match.respond_to? "partial?"
@@ -78,6 +75,9 @@ module Geocoder::US
       @text = text
     end
 
+    def clean (value)
+      value.gsub(/[^a-z0-9 '#-]+/io, "")
+    end
     def tokens
       @text.split(/(,)?\s+/o).map{|token| clean token} 
     end
