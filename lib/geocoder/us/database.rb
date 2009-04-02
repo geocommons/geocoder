@@ -141,7 +141,7 @@ module Geocoder::US
 
     def primary_places (zips)
       in_list = placeholders_for zips
-      sql = "SELECT * FROM place WHERE zip IN (#{in_list}) AND paflag = 'P';"
+      sql = "SELECT * FROM place WHERE zip IN (#{in_list}) ORDER BY priority;"
       execute sql, *zips
     end
 
