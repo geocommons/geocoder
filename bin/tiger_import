@@ -11,7 +11,7 @@ shift
 
 mkdir -p $TMP || exit 1
 
-[ ! -r $DATABASE ] && sqlite3 $DATABASE <${SQL}/create.sql
+[ ! -r $DATABASE ] && cat ${SQL}/{create,place}.sql | sqlite3 $DATABASE
  
 if [ x"$@" = x"" ]; then
     cat
@@ -34,5 +34,5 @@ fi | while read county; do
      done && \
      cat ${SQL}/convert.sql) | sqlite3 $DATABASE
     rm -f $TMP/*
-done
+done 2>&1 | tee import-$$.log
 rm -rf $TMP

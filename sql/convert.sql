@@ -20,7 +20,7 @@ INSERT INTO feature
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
-INSERT INTO edge
+INSERT OR IGNORE INTO edge
     SELECT l.tlid, compress_wkb_line(the_geom) FROM
         (SELECT DISTINCT tlid FROM linezip) AS l, tiger_edges e
         WHERE l.tlid=e.tlid AND fullname <> "" AND fullname IS NOT NULL;
