@@ -49,6 +49,29 @@ module Geocoder::US
         false
       end
     end
+    def extend (state, token)
+      if token.nil?
+        no_parse = clone
+        no_parse.penalty += 1
+        return no_parse
+      end
+      if token == ","
+        next_state!
+        return self
+      end
+      if fetch(state).any?
+        value = fetch(state) + " " + token
+      else
+        value = token
+      end
+      if test? match, value
+        new_parse = clone
+        new_parse[state] = value
+        new_parse.state = state
+        return new_parse
+      end
+      return nil
+    end
     def substitute!
       for field, match, groups in Fields
         next if fetch(field).empty?
@@ -76,36 +99,33 @@ module Geocoder::US
     end
 
     def clean (value)
-      value.gsub(/[^a-z0-9 '#-]+/io, "")
+      value.gsub(/[^a-z0-9 '#\/-]+/io, "")
     end
     def tokens
       @text.split(/(,)?\s+/o).map{|token| clean token} 
     end
-
+    def expand_token (token)
+      tokens = [token, Name_Abbr[token]]
+      if /^\d/o.match token
+        num = token.to_i
+      elsif Ordinals[num]
+        num = Ordinals[num]
+      elsif Cardinals[num]
+        num = Cardinals[num]
+      end
+      tokens += [num.to_s, Ordinals[num], Cardinals[num]] if num < 100
+      tokens.compact.to_set
+    end
     def parse_token (stack, token, max_penalty)
       return stack if token.empty?
-      if token == ","
-        stack.each {|parse| parse.next_state!}
-        return stack
-      end
+      tokens = expand_token token
       output = []
       for parse in stack
-        if parse.penalty < max_penalty
-          no_parse = parse.clone
-          no_parse.penalty += 1
-          output << no_parse
-        end
+        output << parse.extend state, nil if parse.penalty < max_penalty
         for state, match in parse.remaining_states
-          if parse[state].any?
-            value = parse[state] + " " + token
-          else
-            value = token
-          end
-          if parse.test? match, value
-            new_parse = parse.clone
-            new_parse[state] = value
-            new_parse.state = state
-            output << new_parse
+          for item in tokens
+            new_parse = parse.extend state, item
+            output << new_parse if new_parse
           end
         end
       end

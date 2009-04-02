@@ -1,4 +1,5 @@
 require 'set'
+require 'geocoder/us/numbers'
 
 module Geocoder
 end
