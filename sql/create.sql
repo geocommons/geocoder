@@ -7,12 +7,11 @@ CREATE TABLE place(
   lon NUMERIC(9,6),
   status CHAR(1),
   fips_class CHAR(2),
-  fips_place,
+  fips_place CHAR(7),
   fips_county CHAR(5),
-  priority char(1)
-);
+  priority char(1));
 CREATE TABLE edge (
-  tlid INTEGER(10),
+  tlid INTEGER(10) PRIMARY KEY,
   geometry BLOB);
 CREATE TABLE feature (
   tlid INTEGER(10),
