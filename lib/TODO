@@ -1,10 +1,12 @@
 1. Check interpolate measure: scale longitude or not?
-2. Add points to places...?
-3. Add FIPS55 places to place table
-4. handle the following:
+4. handle the following: (*)
     - conversion of full-word cardinals to numerals in street names
     - conversion of place/street name abbreviations, e.g. "Saint", "Mount"
 5. Intersections...
-6. Unit tests
-7. Documentation
-8. Make SQLite disk cache size an option to the Database constructor
+    - import ALL linestrings (even those with without ranges)
+    - throw away internal points on lines that don't have ranges
+6. Unit tests (*)
+7. Documentation (*)
+8. Make SQLite memory cache size an option to the Database constructor
+9. Precision and accuracy measure
+10. Street line set back

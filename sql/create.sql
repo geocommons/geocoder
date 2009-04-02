@@ -1,9 +1,16 @@
-CREATE TABLE place (
-    zip CHAR(5),
-    city VARCHAR(100),
-    city_phone VARCHAR(5),
-    state CHAR(2),
-    paflag CHAR(1));
+CREATE TABLE place(
+  zip CHAR(5),
+  city VARCHAR(100),
+  state CHAR(2),
+  city_phone VARCHAR(5),
+  lat NUMERIC(9,6),
+  lon NUMERIC(9,6),
+  status CHAR(1),
+  fips_class CHAR(2),
+  fips_place,
+  fips_county CHAR(5),
+  priority char(1)
+);
 CREATE TABLE edge (
   tlid INTEGER(10),
   geometry BLOB);
