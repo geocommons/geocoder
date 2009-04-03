@@ -49,12 +49,12 @@ module Geocoder::US
         false
       end
     end
-    def extend (state, token)
-      if token.nil?
-        no_parse = clone
-        no_parse.penalty += 1
-        return no_parse
-      end
+    def skip
+      no_parse = clone
+      no_parse.penalty += 1
+      return no_parse
+    end
+    def extend (state, match, token)
       if token == ","
         next_state!
         return self
@@ -113,7 +113,7 @@ module Geocoder::US
       elsif Cardinals[num]
         num = Cardinals[num]
       end
-      tokens += [num.to_s, Ordinals[num], Cardinals[num]] if num < 100
+      tokens += [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
       tokens.compact.to_set
     end
     def parse_token (stack, token, max_penalty)
@@ -121,10 +121,10 @@ module Geocoder::US
       tokens = expand_token token
       output = []
       for parse in stack
-        output << parse.extend state, nil if parse.penalty < max_penalty
+        output << parse.skip if parse.penalty < max_penalty
         for state, match in parse.remaining_states
           for item in tokens
-            new_parse = parse.extend state, item
+            new_parse = parse.extend state, match, item
             output << new_parse if new_parse
           end
         end

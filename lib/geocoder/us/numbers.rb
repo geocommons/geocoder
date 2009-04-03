@@ -4,7 +4,7 @@ end
 module Geocoder::US
   class NumberMap < Hash
     def self.[] (array)
-      nmap = new()
+      nmap = self.new({})
       array.each {|item| nmap << item } 
       nmap
     end
@@ -26,9 +26,8 @@ module Geocoder::US
   Cardinal_Tens = %w[ twenty thirty forty fifty sixty seventy eighty ninety ]
   Cardinal_Tens.each {|tens|
     Cardinals << tens
-    Cardinals[1..9].each {|ones| Cardinals << tens + "-" + ones}
+    (1..9).each {|n| Cardinals << tens + "-" + Cardinals[n]}
   }
-
 
   Ordinals = NumberMap[%w[
     zeroth first second third fourth fifth sixth seventh eighth ninth
@@ -37,6 +36,6 @@ module Geocoder::US
   ]]
   Cardinal_Tens.each {|tens|
     Ordinals << tens.gsub("y","ieth")
-    Ordinals[1..9].each {|ones| Ordinals << tens + "-" + ones}
+    (1..9).each {|n| Ordinals << tens + "-" + Ordinals[n]}
   }
 end
