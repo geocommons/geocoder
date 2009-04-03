@@ -11,10 +11,16 @@ module Geocoder::US
     def initialize (array)
       @count = 0
     end
+    def clean (key)
+      key.is_a?(String) ? key.downcase.gsub(/\W/o, "") : key
+    end
     def <<(item)
-      store item, @count
+      store clean(item), @count
       store @count, item
       @count += 1
+    end
+    def [] (key)
+      super(clean(key))
     end
   end
 
