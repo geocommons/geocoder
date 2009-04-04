@@ -27,7 +27,7 @@ module Geocoder::US
     attr_accessor :penalty
     def self.new
       parse = self[*(Fields.map {|f,m| [f,""]}.flatten)]
-      parse.state   = :number
+      parse.state   = Fields[0][0]
       parse.penalty = 0
       parse
     end
@@ -55,7 +55,7 @@ module Geocoder::US
       return no_parse
     end
     def extend (state, match, token)
-      if token == ","
+      if match.nil? or token == ","
         next_state!
         return self
       end
