@@ -36,7 +36,8 @@ module Geocoder::US
       Fields[Field_Index[@state]...Fields.length]
     end
     def next_state!
-      @state = remaining_states[1]
+      remain = remaining_states[1]
+      @state = remain.nil? ? nil : remain[0]
     end
     def test? (match, value)
       if match.respond_to? "partial?"
