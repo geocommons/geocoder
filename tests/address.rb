@@ -1,6 +1,7 @@
 $LOAD_PATH.unshift '../lib'
 
 require 'test/unit'
+require 'set'
 require 'geocoder/us/address'
 
 include Geocoder::US
@@ -101,5 +102,42 @@ class TestParse < Test::Unit::TestCase
     assert 4, parse.score
     parse.penalty = 1
     assert 3, parse.score
+  end
+end
+
+class TestAddress < Test::Unit::TestCase
+  def test_new
+    addr = Address.new("1600 Pennsylvania Av., Washington DC")
+    assert_equal "1600 Pennsylvania Av., Washington DC", addr.text
+  end
+  def test_clean
+    addr = Address.new("")
+    assert_equal "cleaned text", addr.clean("cleaned: text!")
+    assert_equal "cleaned-text #2", addr.clean("cleaned-text: #2?")
+    assert_equal "it's working 1/2", addr.clean("~it's working 1/2~")
+    assert_equal "it's working, yes", addr.clean("it's working, yes...?")
+  end
+  def test_tokens
+    addr = Address.new("  1600 Pennsylvania Av.,  Washington DC   ")
+    tokens = ["1600", "Pennsylvania", "Av", ",", "Washington", "DC"]
+    assert_equal tokens, addr.tokens
+  end
+  def test_expand_token
+    addr = Address.new("")
+    num_list = ["5", "fifth", "five"]
+    num_list.each {|n|
+      assert_equal num_list, addr.expand_token(n).to_a.sort
+    }
+    ex = addr.expand_token("St")
+    assert_kind_of Set, ex
+    assert !(ex.member? nil)
+    assert_equal ["Saint","St"], ex.to_a.sort
+    assert_equal ["Mount","Mt"], addr.expand_token("Mt").to_a.sort
+  end
+  def test_parse_token
+    assert true
+  end
+  def test_parse
+    assert true
   end
 end

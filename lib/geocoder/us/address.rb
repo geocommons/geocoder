@@ -100,19 +100,19 @@ module Geocoder::US
     end
 
     def clean (value)
-      value.gsub(/[^a-z0-9 '#\/-]+/io, "")
+      value.gsub(/[^a-z0-9 ,'#\/-]+/io, "")
     end
     def tokens
-      @text.split(/(,)?\s+/o).map{|token| clean token} 
+      @text.strip.split(/(,)?\s+/o).map{|token| clean token} 
     end
     def expand_token (token)
       tokens = [token, Name_Abbr[token]]
       if /^\d/o.match token
         num = token.to_i
-      elsif Ordinals[num]
-        num = Ordinals[num]
-      elsif Cardinals[num]
-        num = Cardinals[num]
+      elsif Ordinals[token]
+        num = Ordinals[token]
+      elsif Cardinals[token]
+        num = Cardinals[token]
       end
       tokens += [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
       tokens.compact.to_set
