@@ -26,7 +26,7 @@ class TestParse < Test::Unit::TestCase
   end
   def test_remaining_states
     parse = Parse.new
-    assert_equal Fields.length, parse.remaining_states.length
+    assert_equal Block_State+1, parse.remaining_states.length
     parse.state = :street
     assert_equal :street, parse.remaining_states[0][0] 
     assert_equal 10, parse.remaining_states.length
@@ -76,22 +76,20 @@ class TestParse < Test::Unit::TestCase
     assert_nil parse2.extend(:number, /^\d+$/o, "plus 55")
     parse3 = parse2.extend(:number, /^\d+ \w+ \d+$/o, "plus 55")
     assert_equal "55 plus 55", parse3[:number]
-    parse2 = parse.extend :prenum, nil, "55A"
-    assert_equal parse.object_id, parse2.object_id
-    assert_equal :number, parse.state
+    assert_nil parse.extend(:prenum, nil, "55A")
     parse2 = parse.extend :number, /^\d+$/o, ","
-    assert_equal "", parse[:number]
-    assert_equal :sufnum, parse.state
+    assert_equal "", parse2[:number]
+    assert_equal :sufnum, parse2.state
   end
   def test_substitute
     parse = Parse.new 
     parse[:number] = "21-55A"
     parse[:suftyp] = "Street"
     parse.substitute!
-    assert "21-", parse[:prenum]
-    assert "55", parse[:number]
-    assert "A", parse[:sufnum]
-    assert "St", parse[:suftyp]
+    assert_equal "21-", parse[:prenum]
+    assert_equal "55", parse[:number]
+    assert_equal "A", parse[:sufnum]
+    assert_equal "St", parse[:suftyp]
   end
   def test_score
     parse = Parse.new
@@ -134,10 +132,151 @@ class TestAddress < Test::Unit::TestCase
     assert_equal ["Saint","St"], ex.to_a.sort
     assert_equal ["Mount","Mt"], addr.expand_token("Mt").to_a.sort
   end
+
+  def assert_state (state, value, parse)
+    assert_equal state, parse.state
+    assert_equal value, parse[state]
+  end
+
   def test_parse_token
-    assert true
+    addr  = Address.new "Test"
+    stack = addr.parse_token([Parse.new], "Test", 0)
+    assert_equal 1, stack.size
+    assert_state :street, "Test", stack[0]
+
+    stack = addr.parse_token([stack[0]], "2", 0)
+    assert_equal 5, stack.size # expansions of "2"
+    assert_state :street, "Test two", stack[0]
+    assert_state :street, "Test second", stack[1]
+    assert_state :street, "Test 2", stack[2]
+    assert_state :city,   "two", stack[3]
+    assert_state :city,   "second", stack[4]
+
+    stack = addr.parse_token([Parse.new], "3", 0)
+    assert_equal 4, stack.size # expansions of "3"
+    assert_state :number, "3", stack[0]
+    assert_state :street, "third", stack[1]
+    assert_state :street, "three", stack[2]
+    assert_state :street, "3",     stack[3]
+    
+    parse = Parse.new
+    parse.state = :street
+    stack = addr.parse_token([parse], "st", 0)
+    assert_equal 5, stack.size # expansions of "st"
+    assert_state :street, "st",    stack[0]
+    assert_state :street, "Saint", stack[1]
+    assert_state :suftyp, "st",    stack[2]
+    assert_state :city,   "st",    stack[3]
+    assert_state :city,   "Saint", stack[4]
+
+    stack2 = addr.parse_token(stack, "apt", 1)
+    assert_equal 15, stack2.length # test out penalty parsing
+
+    stack = addr.parse_token(stack, "apt", 0)
+    assert_equal 10, stack.size
+    assert_state :street,  "st apt", stack[0]    # 0->0
+    assert_state :unittyp, "apt",    stack[1]    # 0->1
+    assert_state :city,    "apt",    stack[2]    # 0->2
+    assert_state :street,  "Saint apt", stack[3] # 1->0
+    assert_state :unittyp, "apt",    stack[4]    # 1->1
+    assert_state :city,    "apt",    stack[5]    # 1->2
+    assert_state :unittyp, "apt",    stack[6]    # 2->0
+    assert_state :city,    "apt",    stack[7]    # 2->1
   end
   def test_parse
-    assert true
+    addrs = [
+      {:text   => "1600 Pennsylvania Av., Washington DC 20050",
+       :number => "1600",
+       :street => "Pennsylvania",
+       :suftyp => "Ave",
+       :city   => "Washington",
+       :state  => "DC",
+       :zip    => "20050"},
+
+      {:text   => "1600 Pennsylvania, Washington DC",
+       :number => "1600",
+       :street => "Pennsylvania",
+       :city   => "Washington",
+       :state  => "DC"},
+
+      {:text   => "1600 Pennsylvania Washington DC",
+       :number => "1600",
+       :street => "Pennsylvania",
+       :city   => "Washington",
+       :state  => "DC"},
+
+      #{:text   => "1600 Pennsylvania Washington",
+      # :number => "1600",
+      # :street => "Pennsylvania",
+      # :city   => "Washington"},
+
+      #{:text   => "1600 Pennsylvania 20050",
+      # :number => "1600",
+      # :street => "Pennsylvania",
+      # :zip    => "20050"},
+
+      {:text   => "1600 Pennsylvania Av, 20050-9999",
+       :number => "1600",
+       :street => "Pennsylvania",
+       :suftyp => "Ave",
+       :zip    => "20050",
+       :plus4  => "9999"},
+
+      {:text   => "1600A Pennsylvania",
+       :number => "1600",
+       :sufnum => "A",
+       :street => "Pennsylvania"},
+
+      {:text   => "A1600 Pennsylvania",
+       :number => "1600",
+       :prenum => "A",
+       :street => "Pennsylvania"},
+
+      {:text   => "1600 1/2 Pennsylvania Av",
+       :number => "1600",
+       :fraction => "1/2",
+       :street => "Pennsylvania",
+       :suftyp => "Ave"},
+
+      {:text   => "1600 Pennsylvania Apt C",
+       :number => "1600",
+       :street => "Pennsylvania",
+       :unittyp => "Apt",
+       :unit   => "C"},
+
+      {:text   => "1005 Gravenstein Highway North",
+       :number => "1005",
+       :street => "Gravenstein",
+       :suftyp => "Hwy",
+       :sufdir => "N"},
+
+      {:text   => "100 N 7 St, Brooklyn",
+       :number => "100",
+       :predir => "N",
+       :street => "7",
+       :suftyp => "St"},
+
+      #{:text   => "100 N 7th St, Brooklyn",
+      # :number => "100",
+      # :predir => "N",
+      # :street => "7",
+      # :suftyp => "St"},
+
+      {:text   => "100 N Seventh St, Brooklyn",
+       :number => "100",
+       :predir => "N",
+       :street => "7",
+       :suftyp => "St"},
+    ]
+    for fixture in addrs
+      text = fixture.delete :text
+      addr = Address.new(text)
+      result = addr.parse(0,10)
+      assert_kind_of Array, result
+      assert result.length <= 10
+      for key, val in fixture
+        assert_equal val, result[0][key], "#{text} (#{key})"
+      end
+    end
   end
 end

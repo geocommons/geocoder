@@ -21,6 +21,7 @@ module Geocoder::US
     [:plus4,    nil]
   ]
   Field_Index = Hash[*((0...Fields.length).map {|i| [Fields[i][0],i]}.flatten)]
+  Block_State = Field_Index[:street]
 
   class Parse < Hash
     attr_accessor :state
@@ -33,7 +34,9 @@ module Geocoder::US
     end
     def remaining_states
       return [] if @state.nil? or Field_Index[@state].nil?
-      Fields[Field_Index[@state]...Fields.length]
+      start = Field_Index[@state]
+      stop  = start < Block_State ? Block_State : (Fields.length-1)
+      Fields[start..stop]
     end
     def next_state!
       remain = remaining_states[1]
@@ -56,9 +59,12 @@ module Geocoder::US
       return no_parse
     end
     def extend (state, match, token)
-      if match.nil? or token == ","
-        next_state!
-        return self
+      return nil if match.nil?
+      if token == ","
+        new_parse = clone
+        new_parse.state = state
+        new_parse.next_state!
+        return new_parse
       end
       if fetch(state).any?
         value = fetch(state) + " " + token
@@ -67,8 +73,8 @@ module Geocoder::US
       end
       if test? match, value
         new_parse = clone
-        new_parse[state] = value
         new_parse.state = state
+        new_parse[state] = value
         return new_parse
       end
       return nil
@@ -78,7 +84,7 @@ module Geocoder::US
         next if fetch(field).empty?
         if match.respond_to? "key?"
           value = fetch(field)
-          store field, match[value] if match.key? value
+          store field, match[value].to_s if match.key? value
         elsif match.is_a? Regexp and not groups.nil?
           submatch = fetch(field).scan(match)[0]
           unless submatch.nil?
@@ -126,6 +132,7 @@ module Geocoder::US
         for state, match in parse.remaining_states
           for item in tokens
             new_parse = parse.extend state, match, item
+            #print "matched #{item} to #{state}: #{new_parse.inspect}\n" if new_parse
             output << new_parse if new_parse
           end
         end
