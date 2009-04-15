@@ -21,12 +21,14 @@ get '/' do
   end
 end
 
-require "yaml"
-post '/batch' do 
-  FileUtils.mkdir_p('uploads/')
-  FileUtils.mv(params[:uploaded_csv][:tempfile].path, "uploads/#{params[:uploaded_csv][:filename]}")  
-  csv_file = "uploads/#{params[:uploaded_csv][:filename]}"
+require 'open-uri'
+get '/link.:format' do 
   db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
+  if(params.include?(:url))
+	csv_file = params[:url]
+  else
+  csv_file = "uploads/#{params[:filename]}.csv"
+end
   csv = FasterCSV.parse(open(csv_file))
   headers = csv[0]
   
@@ -39,7 +41,36 @@ post '/batch' do
       next
     end
   end.compact
-  puts @records.to_yaml
+  case params[:format]
+  when /atom/
+    builder :atom
+  when /xml/
+    builder :index
+  else
+    erb :index
+  end
+  
+end
+
+
+post '/batch' do 
+  FileUtils.mkdir_p('uploads/')
+  FileUtils.mv(params[:uploaded_csv][:tempfile].path, "uploads/#{params[:uploaded_csv][:filename]}")  
+  csv_file = "uploads/#{params[:uploaded_csv][:filename]}"
+  db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
+  @filename = params[:uploaded_csv][:filename].gsub(/\.csv/,"")
+  csv = FasterCSV.parse(open(csv_file))
+  headers = csv[0]
+  
+  @records = csv.collect do |record|
+    next if record == headers
+    begin
+      (db.geocode record[1]).first
+    rescue Exception => e
+      puts e.message
+      next
+    end
+  end.compact
   case params[:format]
   when /atom/
     builder :index
