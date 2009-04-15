@@ -12,17 +12,20 @@ get '/' do
   end
 
   case params[:format]
-  when /atom/
+  when /xml/
     builder :index
+  when /atom/
+    builder :atom
   else
     erb :index
   end
 end
 
-get '/batch' do 
+require "yaml"
+post '/batch' do 
   FileUtils.mkdir_p('uploads/')
   FileUtils.mv(params[:uploaded_csv][:tempfile].path, "uploads/#{params[:uploaded_csv][:filename]}")  
-  csv = "uploads/#{params[:uploaded_csv][:filename]}"
+  csv_file = "uploads/#{params[:uploaded_csv][:filename]}"
   db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
   csv = FasterCSV.parse(open(csv_file))
   headers = csv[0]
@@ -31,11 +34,12 @@ get '/batch' do
     next if record == headers
     begin
       (db.geocode record[1]).first
-    rescue
+    rescue Exception => e
+      puts e.message
       next
     end
-  end
-  
+  end.compact
+  puts @records.to_yaml
   case params[:format]
   when /atom/
     builder :index
