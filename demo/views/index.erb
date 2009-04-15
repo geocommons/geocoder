@@ -10,8 +10,12 @@
 <p><b>Geocoder Demo</b></p>
 <p>
 <form>
-<input type="text" name="address" value="<%= params[:address] %>" size="80">
+<label>Enter an address:</label> <input type="text" name="address" value="<%= params[:address] %>" size="80">
 <input type="submit" value="Geocode" />
+</form>
+<form action="batch">
+<label>Upload a CSV:</label> <input type="file" name="uploaded_csv" id="uploaded_csv">
+<input type="submit" value="Batch Geocode" />
 </form>
 </p>
 <% unless @records.nil? %>
