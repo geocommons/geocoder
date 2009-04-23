@@ -118,6 +118,12 @@ module Geocoder::US
       execute sql, metaphone(street,5), number, number
     end
 
+    def edges (edge_ids)
+      in_list = placeholders_for edge_ids
+      sql = "SELECT DISTINCT edge.* FROM edge WHERE edge.tlid IN (#{in_list});"
+      execute sql, *edge_ids
+    end
+
     def primary_records (edge_ids)
       in_list = placeholders_for edge_ids
       # TODO: the DISTINCT is needed because some TLIDs get duplicated
@@ -267,13 +273,31 @@ module Geocoder::US
       raise "Can't happen!"
     end
 
+    def canonicalize_places! (candidates)
+      zips_used  = unique_values(candidates, :zip)
+      pri_places = rows_to_h primary_places(zips_used), :zip
+      candidates.map! {|record|
+        current_places = pri_places[[record[:zip]]]
+        top_priority = current_places.map{|p| p[:priority]}.min
+        current_places.select {|p| p[:priority] == top_priority}.map {|p|
+          record.merge({
+            :city => p[:city], 
+            :state => p[:state], 
+            :fips_count => p[:fips_county]
+          })
+        }
+      } 
+      candidates.flatten!
+    end
+
     def clean_row! (row)
       row.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :street_phone,
-           :city_phone, :fromhn, :tohn, :paflag].include? k}
+           :city_phone, :fromhn, :tohn, :paflag,
+           :priority, :fips_class, :fips_place, :state].include? k}
     end
 
-    def geocode_address (query)
+    def geocode_address (query, canonicalize=true)
       # lookup.rst (1)
       places = []
 
@@ -291,7 +315,6 @@ module Geocoder::US
       # if candidates.empty?
       #  candidates = more_candidate_records query[:number], query[:street] 
       # end
-
       return [] if candidates.empty?
 
       # need to join up places and candidates here, for scoring
@@ -305,7 +328,11 @@ module Geocoder::US
 
       # lookup.rst (9)
       edge_ids = unique_values candidates, :tlid
-      records  = primary_records edge_ids
+      if canonicalize
+        records  = primary_records edge_ids
+      else
+        records  = edges edge_ids
+      end        
 
       # lookup.rst (10a) 
       merge_rows! candidates, records, :tlid, :zip
@@ -313,7 +340,7 @@ module Geocoder::US
       # lookup.rst (10b)
       ranges  = rows_to_h all_ranges(edge_ids), :tlid
 
-      candidates.each {|record|
+      candidates.map {|record|
         # lookup.rst (10c) & (10d)
         side_ranges = ranges_for_record ranges, record
         dist = interpolation_distance( query[:number].to_i, side_ranges )
@@ -323,22 +350,21 @@ module Geocoder::US
         record[:lon], record[:lat] = interpolate points, dist
         record[:number] = query[:number]
       }
-
+      
       # lookup.rst (11)
-      zips = unique_values candidates, :zip
-      merge_rows! candidates, primary_places(zips), :zip
-
+      canonicalize_places! candidates if canonicalize
+   
       # lookup.rst (12)
       candidates.each {|record| clean_row! record}
       candidates
     end
 
-    def geocode (string, max_penalty=0, cutoff=10)
+    def geocode (string, max_penalty=0, cutoff=10, canonicalize=true)
       addr = Address.new string
       for query in addr.parse(max_penalty, cutoff)
         next unless query[:street].any? and (query[:zip].any? \
                                           or query[:city].any?)
-        results = geocode_address query
+        results = geocode_address query, canonicalize
         return results if results.any?
       end
       return []
