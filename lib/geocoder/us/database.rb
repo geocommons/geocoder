@@ -74,8 +74,11 @@ module Geocoder::US
     end
 
     def execute (sql, *params)
-      # p sql, params
       st = prepare(sql) 
+      execute_statement st, *params
+    end
+
+    def execute_statement (st, *params)
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
       rows = []
@@ -109,16 +112,21 @@ module Geocoder::US
       execute sql, *params
     end
 
-    def more_candidate_records (number, street)
+    def more_candidate_records (number, street, zips)
       sql = <<'      SQL'
         SELECT feature.*, range.* FROM feature, range
           WHERE street_phone = ?
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
+           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))
       SQL
-      execute sql, metaphone(street,5), number, number
+      zip3s = zips.map {|z| z[0..2]}.to_set.to_a
+      or_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
+      sql += "AND (" + or_list + ")"
+      p sql
+      st = @db.prepare sql
+      execute_statement st, metaphone(street,5), number, number
     end
 
     def edges (edge_ids)
@@ -315,9 +323,9 @@ module Geocoder::US
      
       # lookup.rst (6)
       # -- this takes too long for certain streets...
-      # if candidates.empty?
-      #  candidates = more_candidate_records query[:number], query[:street] 
-      # end
+      if candidates.empty?
+        candidates = more_candidate_records query[:number], query[:street], zips
+      end
       return [] if candidates.empty?
 
       # need to join up places and candidates here, for scoring
