@@ -10,6 +10,12 @@ module Text::Metaphone
   # to handle numbers and other special cases according to 
   # own rules... and we don't want to preserve whitespace in 
   # input strings...
+  module Rules
+    # 'O', not '0' -- for compat with sqlite module
+    GEOCODER = BUGGY.dup
+    GEOCODER[8] = [ /th/, 'O' ] 
+  end
+
   def metaphone(w, options={})
     # SDE -- Normalise case and remove non-alphanumerics
     s = w.downcase.gsub(/[^a-z0-9]/o, '')
@@ -18,12 +24,8 @@ module Text::Metaphone
     if leading_digits
       return leading_digits[0]
     end
-    # Apply the Metaphone rules
-    #rules = options[:buggy] ? Rules::BUGGY : Rules::STANDARD
-    rules = Rules::BUGGY # SDE -- I'm pretty sure we want these
-                         # for compat with the sqlite3 helper
     # do the actual metaphone transform
-    rules.each { |rx, rep| s.gsub!(rx, rep) }
+    Rules::GEOCODER.each { |rx, rep| s.gsub!(rx, rep) }
     # SDE -- return W or Y if a word starts with that and
     # metaphones to nothing
     if s.empty?
@@ -72,6 +74,7 @@ module Geocoder::US
     end
 
     def execute (sql, *params)
+      p sql, params
       st = prepare(sql) 
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
