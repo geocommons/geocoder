@@ -294,7 +294,7 @@ module Geocoder::US
       row.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :street_phone,
            :city_phone, :fromhn, :tohn, :paflag,
-           :priority, :fips_class, :fips_place, :state].include? k}
+           :priority, :fips_class, :fips_place, :status].include? k}
     end
 
     def geocode_address (query, canonicalize=true)
