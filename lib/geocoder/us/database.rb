@@ -74,7 +74,7 @@ module Geocoder::US
     end
 
     def execute (sql, *params)
-      p sql, params
+      # p sql, params
       st = prepare(sql) 
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
