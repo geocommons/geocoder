@@ -124,7 +124,6 @@ module Geocoder::US
       zip3s = zips.map {|z| z[0..2]}.to_set.to_a
       or_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
       sql += "AND (" + or_list + ")"
-      p sql
       st = @db.prepare sql
       execute_statement st, metaphone(street,5), number, number
     end
