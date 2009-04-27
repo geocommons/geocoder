@@ -101,29 +101,32 @@ module Geocoder::US
 
     def candidate_records (number, street, zips)
       in_list = placeholders_for zips
-      sql = "SELECT feature.*, range.* FROM feature, range
-               WHERE street_phone = ?
-               AND feature.zip IN (#{in_list})
-               AND range.tlid = feature.tlid
-               AND range.zip = feature.zip
-               AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-                OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
+        #-- SELECT feature.*, range.* FROM feature, range
+      sql = "
+        SELECT feature.*, range.tlid, fromhn, tohn, prefix as prenum, range.zip, side 
+          FROM feature, range
+          WHERE street_phone = ?
+          AND feature.zip IN (#{in_list})
+          AND range.tlid = feature.tlid
+          AND range.zip = feature.zip
+          AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
+           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       params = [metaphone(street,5)] + zips + [number, number]
       execute sql, *params
     end
 
     def more_candidate_records (number, street, zips)
-      sql = <<'      SQL'
-        SELECT feature.*, range.* FROM feature, range
+      zip3s = zips.map {|z| z[0..2]}.to_set.to_a
+      zip3_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
+      sql = "
+        SELECT feature.*, range.tlid, fromhn, tohn, prefix as prenum, range.zip, side 
+          FROM feature, range
           WHERE street_phone = ?
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
+          AND (#{zip3_list})
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))
-      SQL
-      zip3s = zips.map {|z| z[0..2]}.to_set.to_a
-      or_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
-      sql += "AND (" + or_list + ")"
+           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       st = @db.prepare sql
       execute_statement st, metaphone(street,5), number, number
     end
@@ -288,6 +291,8 @@ module Geocoder::US
       pri_places = rows_to_h primary_places(zips_used), :zip
       candidates.map! {|record|
         current_places = pri_places[[record[:zip]]]
+        # FIXME: this should never happen!
+        return [] unless current_places
         top_priority = current_places.map{|p| p[:priority]}.min
         current_places.select {|p| p[:priority] == top_priority}.map {|p|
           record.merge({
