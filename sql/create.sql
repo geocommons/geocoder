@@ -24,11 +24,11 @@ CREATE TABLE feature (
   suftyp VARCHAR(3),
   sufqual VARCHAR(2),
   paflag BOOLEAN,
-  zip INTEGER(5));
+  zip CHAR(5));
 CREATE TABLE range (
   tlid INTEGER(10),
   fromhn INTEGER(6),
   tohn INTEGER(6),
   prenum VARCHAR(12),
-  zip INTEGER(5),
+  zip CHAR(5),
   side CHAR(1));
