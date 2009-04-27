@@ -369,7 +369,7 @@ module Geocoder::US
       candidates
     end
 
-    def geocode (string, max_penalty=0, cutoff=10, canonicalize=true)
+    def geocode (string, max_penalty=0, cutoff=25, canonicalize=true)
       addr = Address.new string
       for query in addr.parse(max_penalty, cutoff)
         next unless query[:street].any? and (query[:zip].any? \
