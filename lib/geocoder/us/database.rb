@@ -211,8 +211,11 @@ module Geocoder::US
         # we test separately for parity
         score += 1  if candidate[:fromhn].to_i % 2 == query[:number].to_i % 2
 
+        # deduct from the score for query penalty
+        denominator = compare.length + query.penalty
+
         # lookup.rst (7d)
-        candidate[:score] = format("%.3f",score.to_f / compare.length).to_f
+        candidate[:score] = format("%.3f",score.to_f / denominator).to_f
       end
     end
 
@@ -312,6 +315,36 @@ module Geocoder::US
            :priority, :fips_class, :fips_place, :status].include? k}
     end
 
+    def geocode_place (query, canonicalize=true)
+      # lookup.rst (1)
+      places = []
+
+      # lookup.rst (2) and (3) together -- index does fine
+      places = places_by_city_or_zip query[:city], query[:zip]
+      return [] if places.empty?
+
+      # lookup.rst (7)
+      score_candidates! query, places
+
+      # lookup.rst (8)
+      best_candidates! places 
+
+      # lookup.rst (11)
+      canonicalize_places! places if canonicalize
+
+      # uniqify places
+      by_name = rows_to_h(places, :city, :state)
+      by_name.values.each {|v| v.sort! {|a,b| a[:zip] <=> b[:zip]}}
+      places = by_name.map {|k,v| v[0]}
+   
+      # lookup.rst (12)
+      places.each {|record| clean_row! record}
+      places.each {|record|
+        record[:accuracy] = (record[:zip] == query[:zip] ? :zip : :city)
+      }
+      places
+    end
+
     def geocode_address (query, canonicalize=true)
       # lookup.rst (1)
       places = []
@@ -371,17 +404,29 @@ module Geocoder::US
    
       # lookup.rst (12)
       candidates.each {|record| clean_row! record}
+      candidates.each {|record| record[:accuracy] = :range}
       candidates
     end
 
     def geocode (string, max_penalty=0, cutoff=25, canonicalize=true)
       addr = Address.new string
-      for query in addr.parse(max_penalty, cutoff)
-        next unless query[:street].any? and (query[:zip].any? \
-                                          or query[:city].any?)
+      parse_list = addr.parse(max_penalty, cutoff)
+      # try to look up each as addresses
+      for query in parse_list
+        next unless query[:number].any? \
+                and query[:street].any? \
+                and (query[:zip].any? or query[:city].any?)
         results = geocode_address query, canonicalize
         return results if results.any?
       end
+      # if that doesn't work, return the first set of matching places
+      results = []
+      for query in parse_list.reverse
+        next unless query[:zip].any? or query[:city].any?
+        results += geocode_place( query, canonicalize )
+        #return results if results.any?
+      end
+      return results.to_set.to_a
       return []
     end
   end
