@@ -13,7 +13,7 @@ mkdir -p $TMP || exit 1
 
 [ ! -r $DATABASE ] && cat ${SQL}/{create,place}.sql | sqlite3 $DATABASE
  
-if [ x"$@" = x"" ]; then
+if [ x"$1" = x"" ]; then
     cat
 else
     ls -d $@ | while read state; do
