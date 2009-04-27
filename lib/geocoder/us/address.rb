@@ -112,7 +112,7 @@ module Geocoder::US
       @text.strip.split(/(,)?\s+/o).map{|token| clean token} 
     end
     def expand_token (token)
-      tokens = [token, Name_Abbr[token]]
+      token_list = [token, Name_Abbr[token]]
       if /^\d/o.match token
         num = token.to_i
       elsif Ordinals[token]
@@ -120,17 +120,17 @@ module Geocoder::US
       elsif Cardinals[token]
         num = Cardinals[token]
       end
-      tokens += [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
-      tokens.compact.to_set
+      token_list += [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
+      token_list.compact.to_set
     end
     def parse_token (stack, token, max_penalty)
       return stack if token.empty?
-      tokens = expand_token token
+      token_list = expand_token token
       output = []
       for parse in stack
         output << parse.skip if parse.penalty < max_penalty
         for state, match in parse.remaining_states
-          for item in tokens
+          for item in token_list
             new_parse = parse.extend state, match, item
             #print "matched #{item} to #{state}: #{new_parse.inspect}\n" if new_parse
             output << new_parse if new_parse
