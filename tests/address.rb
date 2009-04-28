@@ -267,15 +267,57 @@ class TestAddress < Test::Unit::TestCase
        :predir => "N",
        :street => "7",
        :suftyp => "St"},
+
+      {:text   => "100 Central Park West, New York, NY",
+       :number => "100",
+       :street => "Central Park",
+       :sufdir => "W"},
+
+      {:text   => "100 Central Park West, 10010",
+       :index  => 7,
+       :number => "100",
+       :street => "Central Park",
+       :sufdir => "W"},
+
+      {:text   => "1400 Avenue of the Americas, New York, NY 10019",
+       :number => "1400",
+       :pretyp => "Ave",
+       :street => "of the Americas",
+       :city   => "New York",
+       :state  => "NY"},
+
+      {:text   => "1400 Avenue of the Americas, New York",
+       :index  => 2,
+       :number => "1400",
+       :pretyp => "Ave",
+       :street => "of the Americas",
+       :city   => "New York"},
+
+      {:text   => "1400 Ave of the Americas, New York",
+       :index  => 4,
+       :number => "1400",
+       :pretyp => "Ave",
+       :street => "of the Americas",
+       :city   => "New York"},
+
+      {:text   => "1400 Av of the Americas, New York",
+       :index  => 4,
+       :number => "1400",
+       :pretyp => "Ave",
+       :street => "of the Americas",
+       :city   => "New York"},
     ]
     for fixture in addrs
       text = fixture.delete :text
+      idx  = fixture.delete(:index) || 0
       addr = Address.new(text)
-      result = addr.parse(0,10)
+      result = addr.parse(0,25)
       assert_kind_of Array, result
-      assert result.length <= 10
+      assert result.length <= 25
+      #result.each_with_index {|i,x| p i,x}
       for key, val in fixture
-        assert_equal val, result[0][key], "#{text} (#{key})"
+        assert_kind_of Parse, result[idx]
+        assert_equal val, result[idx][key], "#{text} (#{key})"
       end
     end
   end
