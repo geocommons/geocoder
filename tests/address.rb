@@ -306,6 +306,13 @@ class TestAddress < Test::Unit::TestCase
        :pretyp => "Ave",
        :street => "of the Americas",
        :city   => "New York"},
+
+      {:text   => "1400 Av of the Americas New York",
+       :index  => 9,
+       :number => "1400",
+       :pretyp => "Ave",
+       :street => "of the Americas",
+       :city   => "New York"},
     ]
     for fixture in addrs
       text = fixture.delete :text
