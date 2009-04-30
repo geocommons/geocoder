@@ -183,6 +183,32 @@ class TestAddress < Test::Unit::TestCase
     assert_state :unittyp, "apt",    stack[6]    # 2->0
     assert_state :city,    "apt",    stack[7]    # 2->1
   end
+
+  def test_city_parse
+    places = [
+      [ "New York, NY",     "New York", "NY", "" ],
+      [ "New York",         "New York", "",   "" ],
+      [ "Philadelphia",     "Philadelphia", "", "" ],
+      [ "Philadelphia PA",  "Philadelphia", "PA", "" ],
+      [ "Philadelphia, PA", "Philadelphia", "PA", "" ],
+      [ "Philadelphia, Pennsylvania", "Philadelphia", "PA", "" ],
+      [ "Philadelphia, Pennsylvania 19131", "Philadelphia", "PA", "19131" ],
+      [ "Philadelphia 19131", "Philadelphia", "", "19131" ],
+      [ "Pennsylvania 19131", "Pennsylvania", "", "19131" ], # kind of a misfeature
+      [ "19131", "", "", "19131" ],
+      [ "19131-9999", "", "", "19131" ],
+    ]
+    for fixture in places
+      addr  = Address.new fixture[0]
+      result = addr.parse(0,10,:city)
+      assert result.any?
+      assert_kind_of Parse, result[0]
+      for key, val in [:city, :state, :zip].zip(fixture[1..3]) do
+        assert_equal val, result[0][key], "city test " + fixture.join("/")
+      end
+    end
+  end
+
   def test_parse
     addrs = [
       {:text   => "1600 Pennsylvania Av., Washington DC 20050",
