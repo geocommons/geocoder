@@ -26,9 +26,13 @@ module Geocoder::US
   class Parse < Hash
     attr_accessor :state
     attr_accessor :penalty
-    def self.new
+    def self.new (start_state=nil)
       parse = self[*(Fields.map {|f,m| [f,""]}.flatten)]
-      parse.state   = Fields[0][0]
+      if start_state.nil?
+        parse.state = Fields[0][0]
+      else
+        parse.state = Fields[Field_Index[start_state]][0]
+      end
       parse.penalty = 0
       parse
     end
@@ -140,14 +144,18 @@ module Geocoder::US
       output
     end
 
-    def parse (max_penalty=0, cutoff=10)
-      stack = [Parse.new()]
+    def parse (max_penalty=0, cutoff=10, start_state=nil)
+      stack = [Parse.new(start_state)]
       tokens.each {|token|
         stack = parse_token stack[0...cutoff], token, max_penalty
         stack.sort! {|a,b| b.score <=> a.score}
       }
       stack = stack[0...cutoff]
       stack.each {|parse| parse.substitute!}
+    end
+
+    def parse_as_place (max_penalty=0, cutoff=10)
+      parse(max_penalty, cutoff, :city)
     end
   end
 end

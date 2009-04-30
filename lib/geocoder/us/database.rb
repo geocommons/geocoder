@@ -410,8 +410,17 @@ module Geocoder::US
 
     def geocode (string, max_penalty=0, cutoff=25, canonicalize=true)
       addr = Address.new string
+      # first try to geocode as a bare place. this should fail
+      # quickly in cases where the address is really an address.
+      parse_list = addr.parse_as_place(max_penalty, 5)
+      for query in parse_list
+        next unless query[:zip].any? or query[:city].any?
+        results = geocode_place( query, canonicalize )
+        return results if results.any?
+      end
+
+      # next try to look up each as addresses fo shiz
       parse_list = addr.parse(max_penalty, cutoff)
-      # try to look up each as addresses
       for query in parse_list
         next unless query[:number].any? \
                 and query[:street].any? \
@@ -419,14 +428,8 @@ module Geocoder::US
         results = geocode_address query, canonicalize
         return results if results.any?
       end
-      # if that doesn't work, return the first set of matching places
-      results = []
-      for query in parse_list.reverse
-        next unless query[:zip].any? or query[:city].any?
-        results += geocode_place( query, canonicalize )
-        #return results if results.any?
-      end
-      return results.to_set.to_a
+
+      # no such luck
       return []
     end
   end
