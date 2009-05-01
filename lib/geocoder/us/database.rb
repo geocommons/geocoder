@@ -53,7 +53,7 @@ module Geocoder::US
         -- this throws: "SQLite3::SQLException: not authorized" ... why?
         -- SELECT load_extension("#{helper}");
         PRAGMA temp_store=MEMORY;
-        PRAGMA journal_mode=MEMORY;
+        PRAGMA journal_mode=OFF;
         PRAGMA synchronous=OFF;
         PRAGMA cache_size=200000;
         PRAGMA count_changes=0;
@@ -101,9 +101,8 @@ module Geocoder::US
 
     def candidate_records (number, street, zips)
       in_list = placeholders_for zips
-        #-- SELECT feature.*, range.* FROM feature, range
       sql = "
-        SELECT feature.*, range.tlid, fromhn, tohn, prefix as prenum, range.zip, side 
+        SELECT feature.*, range.*
           FROM feature, range
           WHERE street_phone = ?
           AND feature.zip IN (#{in_list})
@@ -116,10 +115,11 @@ module Geocoder::US
     end
 
     def more_candidate_records (number, street, zips)
+      return [] unless zips.any?
       zip3s = zips.map {|z| z[0..2]}.to_set.to_a
       zip3_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
       sql = "
-        SELECT feature.*, range.tlid, fromhn, tohn, prefix as prenum, range.zip, side 
+        SELECT feature.*, range.*
           FROM feature, range
           WHERE street_phone = ?
           AND range.tlid = feature.tlid
@@ -127,6 +127,7 @@ module Geocoder::US
           AND (#{zip3_list})
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
            OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
+      #$stderr.puts(zips.join(",") + "=>" + sql+"\n")
       st = @db.prepare sql
       execute_statement st, metaphone(street,5), number, number
     end
