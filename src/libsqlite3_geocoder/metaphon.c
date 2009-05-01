@@ -64,8 +64,8 @@ int metaphone(const char *Word, char *Metaph, int max_phones) {
             *Word && n < n_end; ++Word)
     {
         /* SDE -- see previous comment */
-        //if (leading_digit && isalpha(*Word))
-        //    break;
+        if (leading_digit && isalpha(*Word))
+            break;
         /* SDE -- copy numbers as well, for geocoding street names */
         /* was: if (isalpha(*Word)) */
         if (isalnum(*Word)) 
