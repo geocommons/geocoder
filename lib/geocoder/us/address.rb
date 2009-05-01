@@ -144,12 +144,26 @@ module Geocoder::US
       output
     end
 
+    def deduplicate (parse_list)
+      # can't just stick the parses in a hash because
+      # differing states and penalties will make them hash differently
+      seen = {}
+      deduped = []
+      parse_list.each {|p|
+        key = p.values_at(*Fields.map{|f| f[0]}).join("|")
+        deduped << p unless seen.key? key
+        seen[key] = true 
+      }
+      deduped
+    end
+
     def parse (max_penalty=0, cutoff=10, start_state=nil)
       stack = [Parse.new(start_state)]
       tokens.each {|token|
         stack = parse_token stack[0...cutoff], token, max_penalty
         stack.sort! {|a,b| b.score <=> a.score}
       }
+      stack = deduplicate stack
       stack = stack[0...cutoff]
       stack.each {|parse| parse.substitute!}
     end

@@ -300,7 +300,7 @@ class TestAddress < Test::Unit::TestCase
        :sufdir => "W"},
 
       {:text   => "100 Central Park West, 10010",
-       :index  => 7,
+       :index  => 5,
        :number => "100",
        :street => "Central Park",
        :sufdir => "W"},
@@ -347,7 +347,7 @@ class TestAddress < Test::Unit::TestCase
       result = addr.parse(0,25)
       assert_kind_of Array, result
       assert result.length <= 25
-      #result.each_with_index {|i,x| p i,x}
+      #result.each_with_index {|x,i| p i,x}
       for key, val in fixture
         assert_kind_of Parse, result[idx]
         assert_equal val, result[idx][key], "#{text} (#{key})"
