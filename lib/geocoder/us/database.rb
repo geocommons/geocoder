@@ -5,59 +5,26 @@ require 'text'
 
 require 'geocoder/us/address'
 
-module Text::Metaphone
-  # this is here because we need to modify the metaphone algo
-  # to handle numbers and other special cases according to 
-  # own rules... and we don't want to preserve whitespace in 
-  # input strings...
-  module Rules
-    # 'O', not '0' -- for compat with sqlite module
-    GEOCODER = BUGGY.dup
-    GEOCODER[8] = [ /th/, 'O' ] 
-  end
-
-  def metaphone(w, options={})
-    # SDE -- Normalise case and remove non-alphanumerics
-    s = w.downcase.gsub(/[^a-z0-9]/o, '')
-    # SDE -- return just leading numbers to deal with cardinal suffixes
-    leading_digits = /^\d+/o.match s
-    if leading_digits
-      return leading_digits[0]
-    end
-    # do the actual metaphone transform
-    Rules::GEOCODER.each { |rx, rep| s.gsub!(rx, rep) }
-    # SDE -- return W or Y if a word starts with that and
-    # metaphones to nothing
-    if s.empty?
-      leading_semivowel = /^\W*([wy])/io.match w
-      return leading_semivowel[0].upcase if leading_semivowel
-    end
-    return s.upcase
-  end
-end
-
 module Geocoder
 end
 
 module Geocoder::US
   class Database
-    def initialize (filename, helper="libsqlite3_geocoder.so")
+    def initialize (filename,
+                    helper="libsqlite3_geocoder.so", cache_size=50000)
       @db = SQLite3::Database.new( filename )
       @st = {}
-      tune helper;
+      tune helper, cache_size;
     end
 
-    def tune (helper)
+    def tune (helper, cache_size)
       # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
-      @db.execute_batch(<<'      SQL')
-        -- this throws: "SQLite3::SQLException: not authorized" ... why?
-        -- SELECT load_extension("#{helper}");
-        PRAGMA temp_store=MEMORY;
-        PRAGMA journal_mode=OFF;
-        PRAGMA synchronous=OFF;
-        PRAGMA cache_size=200000;
-        PRAGMA count_changes=0;
-      SQL
+      @db.enable_load_extension(1)
+      @db.load_extension(helper)
+      @db.enable_load_extension(0)
+      @db.cache_size = cache_size
+      @db.temp_store = "memory"
+      @db.synchronous = "off"
     end
 
     def prepare (sql)
