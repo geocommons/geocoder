@@ -191,9 +191,15 @@ module Geocoder::US
     def score_candidates! (query, candidates)
       for candidate in candidates
         score = 0
-        compare = query.keys.select {|k|
-                    not (query[k].nil? or query[k].empty?)}
-        compare.each {|k| 
+        query.keys.each {|k| 
+          if query[k].nil? or query[k].empty?
+            if candidate[k].nil? or candidate[k].empty?
+              score += 1
+            else
+              score += 0.15
+            end
+            next
+          end
           next if candidate[k].nil?
           # lowercase and eliminate non-word chars before comparison
           a, b = [query,candidate].map{|x| x[k].downcase.gsub(/\W/o, "")}
@@ -213,7 +219,7 @@ module Geocoder::US
         score += 1  if candidate[:fromhn].to_i % 2 == query[:number].to_i % 2
 
         # deduct from the score for query penalty
-        denominator = compare.length + query.penalty
+        denominator = query.keys.length + query.penalty
 
         # lookup.rst (7d)
         candidate[:score] = format("%.3f",score.to_f / denominator).to_f
