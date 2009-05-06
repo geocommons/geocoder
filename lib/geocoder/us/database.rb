@@ -58,12 +58,12 @@ module Geocoder::US
     end
 
     def places_by_city (city)
-      execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city,5)
+      execute "SELECT * FROM place WHERE city_phone = metaphone(?,5)", city
     end
 
     def places_by_city_or_zip (city, zip)
-      execute("SELECT * FROM place WHERE zip = ? or city_phone = ?",
-                  zip, metaphone(city,5))
+      execute("SELECT * FROM place
+                WHERE zip = ? or city_phone = metaphone(?,5)", zip, city)
     end
 
     def candidate_records (number, street, zips)
@@ -71,13 +71,13 @@ module Geocoder::US
       sql = "
         SELECT feature.*, range.*
           FROM feature, range
-          WHERE street_phone = ?
+          WHERE street_phone = metaphone(?,5)
           AND feature.zip IN (#{in_list})
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
            OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
-      params = [metaphone(street,5)] + zips + [number, number]
+      params = [street] + zips + [number, number]
       execute sql, *params
     end
 
@@ -88,7 +88,7 @@ module Geocoder::US
       sql = "
         SELECT feature.*, range.*
           FROM feature, range
-          WHERE street_phone = ?
+          WHERE street_phone = metaphone(?,5)
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip
           AND (#{zip3_list})
@@ -96,7 +96,7 @@ module Geocoder::US
            OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
       #$stderr.puts(zips.join(",") + "=>" + sql+"\n")
       st = @db.prepare sql
-      execute_statement st, metaphone(street,5), number, number
+      execute_statement st, street, number, number
     end
 
     def edges (edge_ids)
