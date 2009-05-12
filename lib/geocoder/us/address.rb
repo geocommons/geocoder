@@ -36,6 +36,10 @@ module Geocoder::US
       parse.penalty = 0
       parse
     end
+    def inspect
+      show = map {|k,v| (v.nil? or v.empty?) ? [] : [k,v]}.flatten
+      Hash[*show].inspect
+    end
     def remaining_states
       return [] if @state.nil? or Field_Index[@state].nil?
       start = Field_Index[@state]
@@ -47,24 +51,29 @@ module Geocoder::US
       @state = remain.nil? ? nil : remain[0]
     end
     def test? (match, value)
+      result = false
       if match.respond_to? "partial?"
-        match.partial? value
+        result = match.partial? value
       elsif match.respond_to? "match"
-        match.match value
+        result = match.match value
       elsif match.respond_to? "call"
-        match.call self, value
-      else
-        false
+        result = match.call self, value
       end
+      return result
     end
     def skip
       no_parse = clone
       no_parse.penalty += 1
       return no_parse
     end
+    def completed_state?
+      match = Fields[Field_Index[@state]][1]
+      return (!match.respond_to?("partial?") or match.key?(fetch(@state)))
+    end
     def extend (state, match, token)
-      return nil if match.nil?
+      return nil if match.nil? or (state != @state and not completed_state?)
       if token == ","
+        return nil unless completed_state?
         new_parse = clone
         new_parse.state = state
         new_parse.next_state!
@@ -88,7 +97,7 @@ module Geocoder::US
         next if fetch(field).empty?
         if match.respond_to? "key?"
           value = fetch(field)
-          store field, match[value].to_s if match.key? value
+          store(field, match[value].to_s) if match.key? value
         elsif match.is_a? Regexp and not groups.nil?
           submatch = fetch(field).scan(match)[0]
           unless submatch.nil?
@@ -116,16 +125,16 @@ module Geocoder::US
       @text.strip.split(/(,)?\s+/o).map{|token| clean token} 
     end
     def expand_token (token)
-      token_list = [token, Name_Abbr[token]]
-      if /^\d/o.match token
+      token_list = [Name_Abbr[token], token]
+      if /^\d+(?:st|nd|rd)?$/o.match token
         num = token.to_i
       elsif Ordinals[token]
         num = Ordinals[token]
       elsif Cardinals[token]
         num = Cardinals[token]
       end
-      token_list += [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
-      token_list.compact.to_set
+      token_list = [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
+      token_list.compact
     end
     def parse_token (stack, token, max_penalty)
       return stack if token.empty?
@@ -136,7 +145,6 @@ module Geocoder::US
         for state, match in parse.remaining_states
           for item in token_list
             new_parse = parse.extend state, match, item
-            #print "matched #{item} to #{state}: #{new_parse.inspect}\n" if new_parse
             output << new_parse if new_parse
           end
         end
@@ -146,7 +154,7 @@ module Geocoder::US
 
     def deduplicate (parse_list)
       # can't just stick the parses in a hash because
-      # differing states and penalties will make them hash differently
+      # ... you can't use Hashes as hash keys in Ruby and get sensible results
       seen = {}
       deduped = []
       parse_list.each {|p|
@@ -163,9 +171,11 @@ module Geocoder::US
         stack = parse_token stack[0...cutoff], token, max_penalty
         stack.sort! {|a,b| b.score <=> a.score}
       }
-      stack = deduplicate stack
+      stack.delete_if {|parse| not parse.completed_state?}
       stack = stack[0...cutoff]
       stack.each {|parse| parse.substitute!}
+      stack = deduplicate stack
+      stack
     end
 
     def parse_as_place (max_penalty=0, cutoff=10)
