@@ -125,7 +125,11 @@ module Geocoder::US
       @text.strip.split(/(,)?\s+/o).map{|token| clean token} 
     end
     def expand_token (token)
-      token_list = [Name_Abbr[token], token]
+      if Name_Abbr.key? token and Name_Abbr[token].downcase != token.downcase
+        token_list = [Name_Abbr[token], token]
+      else
+        token_list = [token]
+      end
       if /^\d+(?:st|nd|rd)?$/o.match token
         num = token.to_i
       elsif Ordinals[token]
