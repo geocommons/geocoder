@@ -301,7 +301,7 @@ class TestAddress < Test::Unit::TestCase
        :sufdir => "W"},
 
       {:text   => "100 Central Park West, 10010",
-       :index  => 1,
+       :index  => 2,
        :number => "100",
        :street => "Central Park",
        :sufdir => "W"},
