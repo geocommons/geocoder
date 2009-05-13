@@ -12,6 +12,8 @@ module Geocoder::US
   class Database
     def initialize (filename,
                     helper="libsqlite3_geocoder.so", cache_size=50000)
+      raise ArgumentError, "can't find database #{filename}" \
+        unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
       tune helper, cache_size;
@@ -311,9 +313,11 @@ module Geocoder::US
       candidates.flatten!
     end
 
-    def clean_row! (row)
-      row[:score] = format("%.3f", row[:score]).to_f unless row[:score].nil?
-      row.delete_if {|k,v| k.is_a? Fixnum or
+    def clean_record! (record)
+      record[:score] = format("%.3f", record[:score]).to_f \
+        unless record[:score].nil?
+      record.keys.each {|k| record[k] = "" if record[k].nil? } # clean up nils
+      record.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :street_phone,
            :city_phone, :fromhn, :tohn, :paflag,
            :priority, :fips_class, :fips_place, :status].include? k}
@@ -342,7 +346,7 @@ module Geocoder::US
       places = by_name.map {|k,v| v[0]}
    
       # lookup.rst (12)
-      places.each {|record| clean_row! record}
+      places.each {|record| clean_record! record}
       places.each {|record|
         record[:precision] = (record[:zip] == query[:zip] ? :zip : :city)
       }
@@ -413,7 +417,7 @@ module Geocoder::US
       canonicalize_places! candidates if canonicalize
    
       # lookup.rst (12)
-      candidates.each {|record| clean_row! record}
+      candidates.each {|record| clean_record! record}
       candidates
     end
 
