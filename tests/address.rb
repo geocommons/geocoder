@@ -127,7 +127,7 @@ class TestAddress < Test::Unit::TestCase
       assert_equal num_list, addr.expand_token(n).to_a.sort
     }
     ex = addr.expand_token("St")
-    assert_kind_of Set, ex
+    assert_kind_of Array, ex
     assert !(ex.member? nil)
     assert_equal ["Saint","St"], ex.to_a.sort
     assert_equal ["Mount","Mt"], addr.expand_token("Mt").to_a.sort
@@ -146,38 +146,38 @@ class TestAddress < Test::Unit::TestCase
 
     stack = addr.parse_token([stack[0]], "2", 0)
     assert_equal 5, stack.size # expansions of "2"
-    assert_state :street, "Test two", stack[0]
+    assert_state :street, "Test 2", stack[0]
     assert_state :street, "Test second", stack[1]
-    assert_state :street, "Test 2", stack[2]
-    assert_state :city,   "two", stack[3]
-    assert_state :city,   "second", stack[4]
+    assert_state :street, "Test two", stack[2]
+    assert_state :city,   "second", stack[3]
+    assert_state :city,   "two", stack[4]
 
     stack = addr.parse_token([Parse.new], "3", 0)
     assert_equal 4, stack.size # expansions of "3"
     assert_state :number, "3", stack[0]
-    assert_state :street, "third", stack[1]
-    assert_state :street, "three", stack[2]
-    assert_state :street, "3",     stack[3]
+    assert_state :street, "3", stack[1]
+    assert_state :street, "third", stack[2]
+    assert_state :street, "three", stack[3]
     
     parse = Parse.new
     parse.state = :street
     stack = addr.parse_token([parse], "st", 0)
     assert_equal 5, stack.size # expansions of "st"
-    assert_state :street, "st",    stack[0]
-    assert_state :street, "Saint", stack[1]
+    assert_state :street, "Saint", stack[0]
+    assert_state :street, "st",    stack[1]
     assert_state :suftyp, "st",    stack[2]
-    assert_state :city,   "st",    stack[3]
-    assert_state :city,   "Saint", stack[4]
+    assert_state :city,   "Saint", stack[3]
+    assert_state :city,   "st",    stack[4]
 
     stack2 = addr.parse_token(stack, "apt", 1)
     assert_equal 15, stack2.length # test out penalty parsing
 
     stack = addr.parse_token(stack, "apt", 0)
     assert_equal 10, stack.size
-    assert_state :street,  "st apt", stack[0]    # 0->0
+    assert_state :street,  "Saint apt", stack[0] # 1->0
     assert_state :unittyp, "apt",    stack[1]    # 0->1
     assert_state :city,    "apt",    stack[2]    # 0->2
-    assert_state :street,  "Saint apt", stack[3] # 1->0
+    assert_state :street,  "st apt", stack[3]    # 0->0
     assert_state :unittyp, "apt",    stack[4]    # 1->1
     assert_state :city,    "apt",    stack[5]    # 1->2
     assert_state :unittyp, "apt",    stack[6]    # 2->0
@@ -262,7 +262,8 @@ class TestAddress < Test::Unit::TestCase
        :number => "1600",
        :fraction => "1/2",
        :street => "Pennsylvania",
-       :suftyp => "Ave"},
+       :suftyp => "Ave",
+       :index  => 2},
 
       {:text   => "1600 Pennsylvania Apt C",
        :number => "1600",
@@ -300,7 +301,7 @@ class TestAddress < Test::Unit::TestCase
        :sufdir => "W"},
 
       {:text   => "100 Central Park West, 10010",
-       :index  => 5,
+       :index  => 2,
        :number => "100",
        :street => "Central Park",
        :sufdir => "W"},
@@ -320,21 +321,21 @@ class TestAddress < Test::Unit::TestCase
        :city   => "New York"},
 
       {:text   => "1400 Ave of the Americas, New York",
-       :index  => 4,
+       :index  => 2,
        :number => "1400",
        :pretyp => "Ave",
        :street => "of the Americas",
        :city   => "New York"},
 
       {:text   => "1400 Av of the Americas, New York",
-       :index  => 4,
+       :index  => 2,
        :number => "1400",
        :pretyp => "Ave",
        :street => "of the Americas",
        :city   => "New York"},
 
       {:text   => "1400 Av of the Americas New York",
-       :index  => 9,
+       :index  => 5,
        :number => "1400",
        :pretyp => "Ave",
        :street => "of the Americas",
@@ -347,7 +348,7 @@ class TestAddress < Test::Unit::TestCase
       result = addr.parse(0,25)
       assert_kind_of Array, result
       assert result.length <= 25
-      #result.each_with_index {|x,i| p i,x}
+      #result.each_with_index {|x,i| print [i,x.score,x.inspect.length,x].inspect, "\n"}
       for key, val in fixture
         assert_kind_of Parse, result[idx]
         assert_equal val, result[idx][key], "#{text} (#{key})"

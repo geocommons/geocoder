@@ -5,59 +5,28 @@ require 'text'
 
 require 'geocoder/us/address'
 
-module Text::Metaphone
-  # this is here because we need to modify the metaphone algo
-  # to handle numbers and other special cases according to 
-  # own rules... and we don't want to preserve whitespace in 
-  # input strings...
-  module Rules
-    # 'O', not '0' -- for compat with sqlite module
-    GEOCODER = BUGGY.dup
-    GEOCODER[8] = [ /th/, 'O' ] 
-  end
-
-  def metaphone(w, options={})
-    # SDE -- Normalise case and remove non-alphanumerics
-    s = w.downcase.gsub(/[^a-z0-9]/o, '')
-    # SDE -- return just leading numbers to deal with cardinal suffixes
-    leading_digits = /^\d+/o.match s
-    if leading_digits
-      return leading_digits[0]
-    end
-    # do the actual metaphone transform
-    Rules::GEOCODER.each { |rx, rep| s.gsub!(rx, rep) }
-    # SDE -- return W or Y if a word starts with that and
-    # metaphones to nothing
-    if s.empty?
-      leading_semivowel = /^\W*([wy])/io.match w
-      return leading_semivowel[0].upcase if leading_semivowel
-    end
-    return s.upcase
-  end
-end
-
 module Geocoder
 end
 
 module Geocoder::US
   class Database
-    def initialize (filename, helper="libsqlite3_geocoder.so")
+    def initialize (filename,
+                    helper="libsqlite3_geocoder.so", cache_size=50000)
+      raise ArgumentError, "can't find database #{filename}" \
+        unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
-      tune helper;
+      tune helper, cache_size;
     end
 
-    def tune (helper)
+    def tune (helper, cache_size)
       # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
-      @db.execute_batch(<<'      SQL')
-        -- this throws: "SQLite3::SQLException: not authorized" ... why?
-        -- SELECT load_extension("#{helper}");
-        PRAGMA temp_store=MEMORY;
-        PRAGMA journal_mode=OFF;
-        PRAGMA synchronous=OFF;
-        PRAGMA cache_size=200000;
-        PRAGMA count_changes=0;
-      SQL
+      @db.enable_load_extension(1)
+      @db.load_extension(helper)
+      @db.enable_load_extension(0)
+      @db.cache_size = cache_size
+      @db.temp_store = "memory"
+      @db.synchronous = "off"
     end
 
     def prepare (sql)
@@ -86,50 +55,53 @@ module Geocoder::US
       rows
     end
 
-    def places_by_zip (zip)
-      execute "SELECT * FROM place WHERE zip = ?", zip
+    def places_by_city_or_zip (city, state, zip)
+      if state.nil? or state.empty?
+        and_state = ""
+        args = [zip,city]
+      else
+        and_state = "AND state = ?"
+        args = [zip,city,state]
+      end
+      execute("SELECT * FROM place WHERE zip = ? or (
+                city_phone = metaphone(?,5) #{and_state})", *args)
     end
 
-    def places_by_city (city)
-      execute "SELECT * FROM place WHERE city_phone = ?", metaphone(city,5)
-    end
-
-    def places_by_city_or_zip (city, zip)
-      execute("SELECT * FROM place WHERE zip = ? or city_phone = ?",
-                  zip, metaphone(city,5))
-    end
-
-    def candidate_records (number, street, zips)
-      in_list = placeholders_for zips
+    def candidate_records_query (street, number=nil)
       sql = "
         SELECT feature.*, range.*
           FROM feature, range
-          WHERE street_phone = ?
-          AND feature.zip IN (#{in_list})
+          WHERE street_phone = metaphone(?,5)
           AND range.tlid = feature.tlid
-          AND range.zip = feature.zip
+          AND range.zip = feature.zip"
+      params = [street]
+      unless number.nil?
+        sql += "
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
-      params = [metaphone(street,5)] + zips + [number, number]
+           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))" 
+        params += [number, number]
+      end
+      return [sql, params]
+    end
+
+    def candidate_records (number, street, zips)
+      sql, params = candidate_records_query(street, number)
+      in_list = placeholders_for zips
+      sql    += " AND feature.zip IN (#{in_list})"
+      params += zips
       execute sql, *params
     end
 
     def more_candidate_records (number, street, zips)
-      return [] unless zips.any?
-      zip3s = zips.map {|z| z[0..2]}.to_set.to_a
-      zip3_list = zip3s.map {|z| "feature.zip LIKE '#{z}%'"}.join(" OR ")
-      sql = "
-        SELECT feature.*, range.*
-          FROM feature, range
-          WHERE street_phone = ?
-          AND range.tlid = feature.tlid
-          AND range.zip = feature.zip
-          AND (#{zip3_list})
-          AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))"
-      #$stderr.puts(zips.join(",") + "=>" + sql+"\n")
+      sql, params = candidate_records_query(street, number)
+      if zips.any?
+        zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
+        like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
+        sql += " AND (#{like_list})"
+        params += zip3s
+      end
       st = @db.prepare sql
-      execute_statement st, metaphone(street,5), number, number
+      execute_statement st, *params
     end
 
     def edges (edge_ids)
@@ -188,12 +160,37 @@ module Geocoder::US
       dest.flatten!
     end
 
+    def assign_number! (query, candidates)
+      hn = query[:number].to_i
+      for candidate in candidates
+        fromhn, tohn = candidate[:fromhn].to_i, candidate[:tohn].to_i
+        if (hn >= fromhn and hn <= tohn) or (hn <= fromhn and hn >= tohn)
+          candidate[:number] = query[:number]
+          candidate[:precision] = :range
+        else
+          candidate[:number] = ((hn - fromhn).abs < (hn - tohn).abs ?
+                                candidate[:fromhn] : candidate[:tohn])
+          candidate[:precision] = :street
+        end
+      end
+    end    
+
     def score_candidates! (query, candidates)
       for candidate in candidates
         score = 0
-        compare = query.keys.select {|k|
-                    not (query[k].nil? or query[k].empty?)}
+        compare = query.keys - [:number]
+        # deduct from the score for query penalty
+        denominator = compare.length + query.penalty
+
         compare.each {|k| 
+          if query[k].nil? or query[k].empty?
+            if candidate[k].nil? or candidate[k].empty?
+              score += 1
+            else
+              score += 0.15
+            end
+            next
+          end
           next if candidate[k].nil?
           # lowercase and eliminate non-word chars before comparison
           a, b = [query,candidate].map{|x| x[k].downcase.gsub(/\W/o, "")}
@@ -203,20 +200,27 @@ module Geocoder::US
           else
             # lookup.rst (7b)
             distance = Text::Levenshtein.distance(a,b)
-            score += 1 - distance.to_f / [a.length,b.length].max
+            score += 1.0 - distance.to_f / [a.length,b.length].max
           end
         }
 
         # lookup.rst (7c)
-        # N.B. query includes "number" which will never match so
-        # we test separately for parity
-        score += 1  if candidate[:fromhn].to_i % 2 == query[:number].to_i % 2
-
-        # deduct from the score for query penalty
-        denominator = compare.length + query.penalty
+        unless query[:number].nil? or query[:number].empty?
+          fromhn, tohn, hn = [candidate[:fromhn], 
+                              candidate[:tohn], 
+                              query[:number]].map {|s|s.to_i}
+          score += 0.5 if fromhn % 2 == hn % 2
+          score += 0.5 if tohn % 2 == hn % 2
+          if candidate[:precision] == :range
+            score += 1
+          else
+            score += 1.0/(candidate[:number].to_i - hn).abs
+          end
+          denominator += 2
+        end
 
         # lookup.rst (7d)
-        candidate[:score] = format("%.3f",score.to_f / denominator).to_f
+        candidate[:score] = score.to_f / denominator
       end
     end
 
@@ -302,15 +306,18 @@ module Geocoder::US
           record.merge({
             :city => p[:city], 
             :state => p[:state], 
-            :fips_count => p[:fips_county]
+            :fips_county => p[:fips_county]
           })
         }
       } 
       candidates.flatten!
     end
 
-    def clean_row! (row)
-      row.delete_if {|k,v| k.is_a? Fixnum or
+    def clean_record! (record)
+      record[:score] = format("%.3f", record[:score]).to_f \
+        unless record[:score].nil?
+      record.keys.each {|k| record[k] = "" if record[k].nil? } # clean up nils
+      record.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :street_phone,
            :city_phone, :fromhn, :tohn, :paflag,
            :priority, :fips_class, :fips_place, :status].include? k}
@@ -321,7 +328,7 @@ module Geocoder::US
       places = []
 
       # lookup.rst (2) and (3) together -- index does fine
-      places = places_by_city_or_zip query[:city], query[:zip]
+      places = places_by_city_or_zip query[:city], query[:state], query[:zip]
       return [] if places.empty?
 
       # lookup.rst (7)
@@ -339,9 +346,9 @@ module Geocoder::US
       places = by_name.map {|k,v| v[0]}
    
       # lookup.rst (12)
-      places.each {|record| clean_row! record}
+      places.each {|record| clean_record! record}
       places.each {|record|
-        record[:accuracy] = (record[:zip] == query[:zip] ? :zip : :city)
+        record[:precision] = (record[:zip] == query[:zip] ? :zip : :city)
       }
       places
     end
@@ -351,13 +358,18 @@ module Geocoder::US
       places = []
 
       # lookup.rst (2) and (3) together -- index does fine
-      places = places_by_city_or_zip query[:city], query[:zip]
+      places = places_by_city_or_zip query[:city], query[:state], query[:zip]
 
       # lookup.rst (4)
       zips = unique_values places, :zip
 
       # lookup.rst (5)
       candidates = candidate_records query[:number], query[:street], zips
+
+      if candidates.empty?
+        # no exact range match?
+        candidates = candidate_records nil, query[:street], zips
+      end
      
       # lookup.rst (6)
       # -- this takes too long for certain streets...
@@ -368,6 +380,8 @@ module Geocoder::US
 
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip
+
+      assign_number! query, candidates
   
       # lookup.rst (7)
       score_candidates! query, candidates
@@ -397,15 +411,13 @@ module Geocoder::US
         # lookup.rst (10f) & (10h)
         points = unpack_geometry record[:geometry]
         record[:lon], record[:lat] = interpolate points, dist
-        record[:number] = query[:number]
       }
       
       # lookup.rst (11)
       canonicalize_places! candidates if canonicalize
    
       # lookup.rst (12)
-      candidates.each {|record| clean_row! record}
-      candidates.each {|record| record[:accuracy] = :range}
+      candidates.each {|record| clean_record! record}
       candidates
     end
 
