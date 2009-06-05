@@ -5,7 +5,7 @@ SHPS="edges"
 DBFS="featnames addr"
 BASE=$(dirname $0)
 SQL="$BASE/../sql"
-HELPER_LIB="$BASE/../lib/libsqlite3_geocoder.so"
+HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
 DATABASE=$1
 shift
 

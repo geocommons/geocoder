@@ -11,7 +11,7 @@ end
 module Geocoder::US
   class Database
     def initialize (filename,
-                    helper="libsqlite3_geocoder.so", cache_size=50000)
+                    helper="sqlite3.so", cache_size=50000)
       raise ArgumentError, "can't find database #{filename}" \
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
@@ -20,6 +20,9 @@ module Geocoder::US
     end
 
     def tune (helper, cache_size)
+      if File.expand_path(helper) != helper
+        helper = File.join(File.dirname(__FILE__), helper)
+      end
       # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
       @db.enable_load_extension(1)
       @db.load_extension(helper)
