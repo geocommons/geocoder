@@ -1,10 +1,11 @@
 #!/bin/bash
 
 BASE=$(dirname $0)
+PATH=$PATH:$BASE/bin
 SQL="$BASE/../sql"
 
-DATABASE=$1
-OLD_DB=$2
+OLD_DB=$1
+DATABASE=${OLD_DB}.$$
 
 [ -r $DATABASE ] && echo "$DATABASE already exists." && exit -1
 [ ! -r $OLD_DB ] && echo "Can't read $OLD_DB." && exit -1
@@ -14,4 +15,5 @@ OLD_DB=$2
   cat ${SQL}/cluster.sql && \
   echo "DETACH DATABASE old;" && \
   cat ${SQL}/index.sql && \
-  echo "ANALYZE;" ) | sqlite3 $DATABASE
+  echo "ANALYZE;" ) | sqlite3 $DATABASE \
+  && mv $DATABASE $OLD_DB

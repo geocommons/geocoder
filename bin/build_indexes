@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BASE=$(dirname $0)
+PATH=$PATH:$BASE/bin
 SQL="$BASE/../sql"
 
 sqlite3 $1 < ${SQL}/index.sql

@@ -4,6 +4,7 @@ TMP="/tmp/tiger-import.$$"
 SHPS="edges"
 DBFS="featnames addr"
 BASE=$(dirname $0)
+PATH=$PATH:$BASE/bin
 SQL="$BASE/../sql"
 HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
 DATABASE=$1
