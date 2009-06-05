@@ -80,6 +80,14 @@ will see error messages for some counties, but this is normal.
 If you only want to import specific counties, you can pipe a list of
 TIGER/Line county directories to tiger_import on stdin.
 
+The tiger_import process uses a binary utility, shp2sqlite, which is derived
+from shp2pgsql, which ships with PostGIS. The shp2sqlite utility converts
+.shp and .dbf files into SQL suitable for import into SQLite. This SQL
+is then piped into the sqlite3 command line tool, where it is loaded into
+temporary tables, and then a set of static SQL statements (kept in the sql/
+directory) are used to transform this data and import it into the database
+itself.
+
 === Build the indexes
 
 After the database import is complete, you will want to construct the database
@@ -88,7 +96,9 @@ indexes:
   $ bin/build_indexes /opt/tiger/geocoder.db
 
 This process will take a few hours, but it's a *lot* faster than building
-the indexes incrementally during the import process.
+the indexes incrementally during the import process. Basically, this process
+simply feeds SQL statements to the sqlite3 utility to construct the indexes on
+the existing database.
 
 === Cluster the database tables (optional)
 
@@ -99,12 +109,13 @@ process will take an hour or two, and may be a micro-optimization.
   $ bin/rebuild_cluster /opt/tiger/geocoder.db
 
 You will need as much free disk space to run rebuild_cluster as the database
-takes up, because the process essentially reconstructs the database in a
-new file and then renames the new one over top of the old.
+takes up, because the process essentially reconstructs the database in a new
+file, with the tables sorted by their relevant indexed columns, and then
+it renames the new database over top of the old.
 
 == Running the unit tests
 
-From within the source tree, you can run the following.
+From within the source tree, you can run the following:
 
   $ ruby tests/run.rb
 
