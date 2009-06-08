@@ -141,7 +141,30 @@ module Geocoder::US
       @text = text
     end
 
-  private
+    # Parse the address string given to initialize(). Takes max_penalty,
+    # cutoff, and start_state as arguments. After each token is parsed,
+    # the current parse stack is sorted by score, and if the stack is
+    # larger than cutoff, the remaining parses are pruned. After all
+    # tokens are parsed, substitutions are applied, and the stack
+    # is deduplicated and returned.
+    def parse (max_penalty=0, cutoff=25, start_state=nil)
+      stack = [Parse.new(start_state)]
+      tokens.each {|token|
+        stack = parse_token stack[0...cutoff], token, max_penalty
+        stack.sort! {|a,b| b.score <=> a.score}
+      }
+      stack.delete_if {|parse| not parse.completed_state?}
+      stack = stack[0...cutoff]
+      stack.each {|parse| parse.substitute!}
+      stack = deduplicate stack
+      stack
+    end
+
+    # Parse the given address string as a place, by calling parse()
+    # with start_state set to :city.
+    def parse_as_place (max_penalty=0, cutoff=10)
+      parse(max_penalty, cutoff, :city)
+    end
 
     # Removes any characters that aren't strictly part of an address string.
     def clean (value)
@@ -193,6 +216,8 @@ module Geocoder::US
       output
     end
 
+  private
+
     # Deduplicate a parse stack. Can't just stick the parses in a hash because
     # you can't use Hashes as hash keys in Ruby and get sensible results.
     def deduplicate (parse_list)
@@ -204,33 +229,6 @@ module Geocoder::US
         seen[key] = true 
       }
       deduped
-    end
-
-  public
-
-    # Parse the address string given to initialize(). Takes max_penalty,
-    # cutoff, and start_state as arguments. After each token is parsed,
-    # the current parse stack is sorted by score, and if the stack is
-    # larger than cutoff, the remaining parses are pruned. After all
-    # tokens are parsed, substitutions are applied, and the stack
-    # is deduplicated and returned.
-    def parse (max_penalty=0, cutoff=25, start_state=nil)
-      stack = [Parse.new(start_state)]
-      tokens.each {|token|
-        stack = parse_token stack[0...cutoff], token, max_penalty
-        stack.sort! {|a,b| b.score <=> a.score}
-      }
-      stack.delete_if {|parse| not parse.completed_state?}
-      stack = stack[0...cutoff]
-      stack.each {|parse| parse.substitute!}
-      stack = deduplicate stack
-      stack
-    end
-
-    # Parse the given address string as a place, by calling parse()
-    # with start_state set to :city.
-    def parse_as_place (max_penalty=0, cutoff=10)
-      parse(max_penalty, cutoff, :city)
     end
   end
 end
