@@ -32,7 +32,7 @@ To build Geocoder::US, you will need gcc/g++, make, and the SQLite 3
 executable and development files installed on your system.
 
 To use the Ruby interface, you will need the 'text' gem installed from
-rubyforge.
+rubyforge. To run the tests, you will also need the 'fastercsv' gem.
 
 Additionally, you will need a custom build of the 'sqlite3-ruby' gem that
 supports loading extension modules in SQLite. You can get a patched version of

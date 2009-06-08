@@ -2,6 +2,8 @@ module Geocoder
 end
 
 module Geocoder::US
+  # The NumberMap class provides a means for mapping ordinal
+  # and cardinal number words to digits and back.
   class NumberMap < Hash
     def self.[] (array)
       nmap = self.new({})
@@ -24,6 +26,7 @@ module Geocoder::US
     end
   end
 
+  # The Cardinals constant maps digits to cardinal number words and back.
   Cardinals = NumberMap[%w[
     zero one two three four five six seven eight nine ten
     eleven twelve thirteen fourteen fifteen sixteen seventeen
@@ -35,6 +38,7 @@ module Geocoder::US
     (1..9).each {|n| Cardinals << tens + "-" + Cardinals[n]}
   }
 
+  # The Ordinals constant maps digits to ordinal number words and back.
   Ordinals = NumberMap[%w[
     zeroth first second third fourth fifth sixth seventh eighth ninth
     tenth eleventh twelfth thirteenth fourteenth fifteenth sixteenth

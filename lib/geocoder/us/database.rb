@@ -9,7 +9,14 @@ module Geocoder
 end
 
 module Geocoder::US
+  # Provides an interface to a Geocoder::US database.
   class Database
+    # Takes the path of an SQLite 3 database prepared for Geocoder::US
+    # as the sole mandatory argument. The helper argument points to the
+    # Geocoder::US SQLite plugin; the module looks for this in the same
+    # directory as database.rb by default. The cache_size argument is
+    # measured in kilobytes and is used to set the SQLite cache size; larger
+    # values will trade memory for speed in long-running processes.
     def initialize (filename,
                     helper="sqlite3.so", cache_size=50000)
       raise ArgumentError, "can't find database #{filename}" \
@@ -19,11 +26,14 @@ module Geocoder::US
       tune helper, cache_size;
     end
 
+  private
+
+    # Load the SQLite extension and tune the database settings.
+    # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
     def tune (helper, cache_size)
       if File.expand_path(helper) != helper
         helper = File.join(File.dirname(__FILE__), helper)
       end
-      # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
       @db.enable_load_extension(1)
       @db.load_extension(helper)
       @db.enable_load_extension(0)
@@ -32,24 +42,28 @@ module Geocoder::US
       @db.synchronous = "off"
     end
 
+    # Return a cached SQLite statement object, preparing it first if
+    # it's not already in the cache.
     def prepare (sql)
       @st[sql] ||= @db.prepare sql
       return @st[sql]
     end
 
+    # Generate enough SQL placeholders for a list of objects.
     def placeholders_for (list)
       (["?"] * list.length).join(",")
     end
 
-    def metaphone (txt, max_phones=5)
-      Text::Metaphone.metaphone(txt)[0...max_phones]
-    end
-
+    # Execute an SQL statement, bind a list of parameters, and
+    # return the result as a list of hashes.
     def execute (sql, *params)
       st = prepare(sql) 
       execute_statement st, *params
     end
 
+    # Execute an SQLite statement object, bind the parameters,
+    # map the column names to symbols, and return the rows
+    # as a list of hashes.
     def execute_statement (st, *params)
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
@@ -58,6 +72,9 @@ module Geocoder::US
       rows
     end
 
+    # Query the place table for by city, optional state, and zip.
+    # The metaphone index on the place table is used to match
+    # city names.
     def places_by_city_or_zip (city, state, zip)
       if state.nil? or state.empty?
         and_state = ""
@@ -70,6 +87,10 @@ module Geocoder::US
                 city_phone = metaphone(?,5) #{and_state})", *args)
     end
 
+    # Generate an SQL query and set of parameters against the feature and range
+    # tables for a street name and optional building number. The SQL is
+    # used by candidate_records and more_candidate_records to filter results
+    # by ZIP code.
     def candidate_records_query (street, number=nil)
       sql = "
         SELECT feature.*, range.*
@@ -87,6 +108,10 @@ module Geocoder::US
       return [sql, params]
     end
 
+    # Query the feature and range tables for a set of ranges, given a
+    # building number, street name, and list of candidate ZIP codes.
+    # The metaphone and ZIP code indexes on the feature table are
+    # used to match results.
     def candidate_records (number, street, zips)
       sql, params = candidate_records_query(street, number)
       in_list = placeholders_for zips
@@ -95,6 +120,10 @@ module Geocoder::US
       execute sql, *params
     end
 
+    # Query the feature and range tables for a set of ranges, given a
+    # building number, street name, and list of candidate ZIP codes.
+    # The ZIP codes are reduced to a set of 3-digit prefixes, broadening
+    # the search area.
     def more_candidate_records (number, street, zips)
       sql, params = candidate_records_query(street, number)
       if zips.any?
@@ -107,12 +136,15 @@ module Geocoder::US
       execute_statement st, *params
     end
 
+    # Query the edge table for a list of edges matching a list of edge IDs.
     def edges (edge_ids)
       in_list = placeholders_for edge_ids
       sql = "SELECT DISTINCT edge.* FROM edge WHERE edge.tlid IN (#{in_list});"
       execute sql, *edge_ids
     end
 
+    # Query the feature table for the primary feature names for each of
+    # a list of edge IDs.
     def primary_records (edge_ids)
       in_list = placeholders_for edge_ids
       # TODO: the DISTINCT is needed because some TLIDs get duplicated
@@ -126,6 +158,8 @@ module Geocoder::US
       execute sql, *edge_ids
     end
 
+    # Query the range table for all ranges associated with the given
+    # list of edge IDs.
     def all_ranges (edge_ids)
       in_list = placeholders_for edge_ids
       sql = "SELECT * FROM range
@@ -134,22 +168,31 @@ module Geocoder::US
       execute sql, *edge_ids
     end
 
+    # Query the place table for notional "primary" place names for each of a
+    # list of ZIP codes. Since the place table shipped with this code is
+    # bespoke, and constructed from a variety of public domain sources,
+    # the primary name for a ZIP is not always the "right" one.
     def primary_places (zips)
       in_list = placeholders_for zips
       sql = "SELECT * FROM place WHERE zip IN (#{in_list}) ORDER BY priority;"
       execute sql, *zips
     end
 
+    # Given a list of rows, find the unique values for a given key.
     def unique_values (rows, key)
       rows.map {|r| r[key]}.to_set.to_a
     end
 
+    # Convert a list of rows into a hash keyed by the given keys.
     def rows_to_h (rows, *keys)
       hash = {}
       rows.each {|row| (hash[row.values_at(*keys)] ||= []) << row; }
       hash
     end
 
+    # Merge the values in the list of rows given in src into the
+    # list of rows in dest, matching rows on the given list of keys.
+    # May generate more than one row in dest for each input dest row.
     def merge_rows! (dest, src, *keys)
       src = rows_to_h src, *keys
       dest.map! {|row|
@@ -163,6 +206,11 @@ module Geocoder::US
       dest.flatten!
     end
 
+    # Given a query hash and a list of candidates, assign :number
+    # and :precision values to each candidate. If the query building
+    # number is inside the candidate range, set the number on the result
+    # and set the precision to :range; otherwise, find the closest
+    # corner and set precision to :street.
     def assign_number! (query, candidates)
       hn = query[:number].to_i
       for candidate in candidates
@@ -176,8 +224,22 @@ module Geocoder::US
           candidate[:precision] = :street
         end
       end
-    end    
+    end
 
+    # Score a list of candidates. For each candidate:
+    # * For each item in the query:
+    # ** if the query item is blank but the candidate is not, score 0.15;
+    #    otherwise, if both are blank, score 1.0.
+    # ** If both items are set, compute the scaled Levenshtein-Damerau distance
+    #    between them, and add that value (between 0.0 and 1.0) to the score.
+    # * Add 0.5 to the score for each numbered end of the range that matches
+    #   the parity of the query number.
+    # * Add 1.0 if the query number is in the candidate range, otherwise
+    #   add a fractional value for the notional distance between the
+    #   closest candidate corner and the query.
+    # * Finally, divide the score by the total number of comparisons.
+    #   The result should be between 0.0 and 1.0, with 1.0 indicating a
+    #   perfect match.
     def score_candidates! (query, candidates)
       for candidate in candidates
         score = 0
@@ -227,17 +289,23 @@ module Geocoder::US
       end
     end
 
+    # Find the candidates in a list of candidates that are tied for the
+    # top score and prune the remainder from the list.
     def best_candidates! (candidates)
       # lookup.rst (8)
       candidates.sort! {|a,b| b[:score] <=> a[:score]}
       candidates.delete_if {|record| record[:score] < candidates[0][:score]}
     end
 
+    # From a hash of ranges keyed by edge ID, find the ranges that
+    # match the edge ID and the street side of a given candidate.
     def ranges_for_record (ranges, record)
       key = record.values_at(:tlid)
       ranges[key].select {|r| r[:side] == record[:side]}
     end
 
+    # Compute the fractional interpolation distance for a query number along an
+    # edge, given all of the ranges for the same side of that edge.
     def interpolation_distance (number, ranges)
       interval = total = 0
       for range in ranges
@@ -253,6 +321,9 @@ module Geocoder::US
       return interval.to_f / total.to_f
     end
 
+    # Unpack an array of little-endian 4-byte ints, and convert them into
+    # signed floats by dividing by 10^6, inverting the process used by the
+    # compress_wkb_line() function in the SQLite helper extension.
     def unpack_geometry (geom)
       points = []
       coords = geom.unpack "V*" # little-endian 4-byte long ints
@@ -262,6 +333,7 @@ module Geocoder::US
       points
     end
 
+    # Calculate the longitude scaling for the average of two latitudes.
     def scale_lon (lat1,lat2)
       # an approximation in place of lookup.rst (10e) and (10g)
       # = scale longitude distances by the cosine of the latitude
@@ -270,12 +342,16 @@ module Geocoder::US
       Math.cos((lat1+lat2) / 2 * Math::PI / 180)
     end
 
+    # Simple Euclidean distances between two 2-D coordinate pairs, scaled
+    # along the longitudinal axis by scale_lon.
     def distance (a, b)
       dx = (b[0] - a[0]) * scale_lon(a[1], b[1])
       dy = (b[1] - a[1]) 
       Math.sqrt(dx ** 2 + dy ** 2)
     end
 
+    # Find an interpolated point along a list of linestring vertices
+    # proportional to the given fractional distance along the line.
     def interpolate (points, fraction)
       return points[0] if fraction == 0.0 
       return points[-1] if fraction == 1.0 
@@ -297,6 +373,9 @@ module Geocoder::US
       raise "Can't happen!"
     end
 
+    # Find and replace the city, state, and county information
+    # in a list of candidates with the primary place information
+    # for the ZIP codes in the candidate list.
     def canonicalize_places! (candidates)
       zips_used  = unique_values(candidates, :zip)
       pri_places = rows_to_h primary_places(zips_used), :zip
@@ -316,6 +395,9 @@ module Geocoder::US
       candidates.flatten!
     end
 
+    # Clean up a candidate record by formatting the score, replacing nil
+    # values with empty strings, and deleting artifacts from database
+    # queries.
     def clean_record! (record)
       record[:score] = format("%.3f", record[:score]).to_f \
         unless record[:score].nil?
@@ -326,6 +408,9 @@ module Geocoder::US
            :priority, :fips_class, :fips_place, :status].include? k}
     end
 
+    # Given an Address object, return a list of possible geocodes by place
+    # name. If canonicalize is true, attempt to return the "primary" postal
+    # place name for the given city, state, or ZIP.
     def geocode_place (query, canonicalize=true)
       # lookup.rst (1)
       places = []
@@ -356,6 +441,10 @@ module Geocoder::US
       places
     end
 
+    # Given an Address object, return a list of possible geocodes by address
+    # range interpolation. If canonicalize is true, attempt to return the
+    # "primary" street and place names, if they are different from the ones
+    # given.
     def geocode_address (query, canonicalize=true)
       # lookup.rst (1)
       places = []
@@ -424,6 +513,23 @@ module Geocoder::US
       candidates
     end
 
+  public
+
+    # Geocode a given address or place name string. The max_penalty and cutoff
+    # arguments are passed to the Address parse functions. If canonicalize is
+    # true, attempt to return the "primary" street and place names, if they are
+    # different from the ones given.
+    #
+    # Returns possible candidate matches as a list of hashes.
+    #
+    # * The :lat and :lon values of each hash store the range-interpolated
+    #   address coordinates as latitude and longitude in the WGS84 spheroid.
+    # * The :precision value may be one of :city, :zip, :street, or :range, in
+    #   order of increasing precision.
+    # * The :score value will be a float between 0.0 and 1.0 representing
+    #   the approximate "goodness" of the candidate match.
+    # * The other values in the hash will represent various structured
+    #   components of the address and place name.
     def geocode (string, max_penalty=0, cutoff=25, canonicalize=true)
       addr = Address.new string
       # first try to geocode as a bare place. this should fail
