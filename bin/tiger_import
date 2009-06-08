@@ -4,7 +4,7 @@ TMP="/tmp/tiger-import.$$"
 SHPS="edges"
 DBFS="featnames addr"
 BASE=$(dirname $0)
-PATH=$PATH:$BASE/bin
+PATH=$PATH:$BASE
 SQL="$BASE/../sql"
 HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
 DATABASE=$1
@@ -22,14 +22,20 @@ if [ x"$1" = x"" ]; then
     cat
 else
     # Otherwise, find all of the contents of each state directory.
-    ls -d $@ | while read state; do
+    ls -d $1/[0-9]* | while read state; do
         ls -d ${state}/[0-9]*
     done
 fi | while read county; do
     echo "--- $county"
     # Unpack the county files into the temp directory.
     for file in $SHPS $DBFS; do
-        unzip -q $(ls ${county}/*_${file}.zip) -d $TMP
+	ZIP=$(ls ${county}/*_${file}.zip 2>/dev/null)
+	SHP=$(ls ${county}/*_${file}.* 2>/dev/null)
+	if [ x"$ZIP" != x"" ]; then
+	    unzip -q $ZIP -d $TMP
+	elif [ x"$SHP" != x"" ]; then
+	    ln -s $SHP $TMP
+	fi
     done
     # Generate an SQL stream to feed into the sqlite3 binary.
     # Start by loading the helper libs and initializing the temporary tables
@@ -38,11 +44,11 @@ fi | while read county; do
      cat ${SQL}/tiger.sql && \
      for file in $SHPS; do
        # Convert each Shapefile into SQL statements.
-       shp2sqlite -aS $(ls ${TMP}/*_${file}.shp) tiger_${file}
+       shp2sqlite -aS ${TMP}/*_${file}.shp tiger_${file}
      done && \
      for file in $DBFS; do
        # Convert each DBF into SQL statements likewise.
-       shp2sqlite -an $(ls ${TMP}/*_${file}.dbf) tiger_${file}
+       shp2sqlite -an ${TMP}/*_${file}.dbf tiger_${file}
      done && \
      cat ${SQL}/convert.sql) | sqlite3 $DATABASE
     # Finally, do the transform/load phase (convert.sql)
