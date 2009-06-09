@@ -16,7 +16,7 @@ class TestDatabase < Test::Unit::TestCase
     begin
       Geocoder::US::Database.new(Geocoder::US::Database_File)
     rescue ArgumentError
-      assert_true true # dummy assertion to keep test from failing
+      assert true # dummy assertion to keep test from failing
       nil
     end
   end
