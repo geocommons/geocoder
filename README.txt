@@ -28,10 +28,11 @@ public domain sources.
 
 == Prerequisites
 
-To build Geocoder::US, you will need gcc/g++, make, and the SQLite 3
-executable and development files installed on your system.
+To build Geocoder::US, you will need gcc/g++, make, bash or equivalent, the
+standard *NIX 'unzip' utility, and the SQLite 3 executable and development
+files installed on your system.
 
-To use the Ruby interface, you will need the 'text' gem installed from
+To use the Ruby interface, you will need the 'Text' gem installed from
 rubyforge. To run the tests, you will also need the 'fastercsv' gem.
 
 Additionally, you will need a custom build of the 'sqlite3-ruby' gem that
@@ -39,13 +40,25 @@ supports loading extension modules in SQLite. You can get a patched version of
 this gem from http://github.com/schuyler/sqlite3-ruby/. Until the sqlite3-ruby
 maintainers roll in the relevant patch, you will need *this* version.
 
+*NOTE*: If you do not have /usr/include/sqlite3ext.h installed, then your
+sqlite3 binaries are probably not configured to support dynamic extension
+loading. If not, you *must* compile and install SQLite from source, or rebuild
+your system packages. This is not believed to be a problem on Debian/Ubuntu,
+but is known to be a problem with Red Hat/CentOS.
+
+*NOTE*: If you *do* have to install from source, make sure that the
+source-installed 'sqlite3' program is in your path before proceeding (and not
+the system-installed version), using `which sqlite3`. Also, be sure that you've
+added your source install prefix (usually /usr/local) to /etc/ld.so.conf (or
+its moral equivalent) and that you've run /sbin/ldconfig.
+
 == Building Geocoder::US
 
 Unpack the source and run 'make'. This will compile the SQLite 3 extension
 needed by Geocoder::US, the Shapefile import utility, and the Geocoder-US
 gem.
 
-You can run 'make install' to install the gem systemwide.
+You can run 'make install' as root to install the gem systemwide.
 
 == Generating a Geocoder::US Database
 
@@ -78,7 +91,10 @@ that not all TIGER/Line source files contain address range information, so you
 will see error messages for some counties, but this is normal.
 
 If you only want to import specific counties, you can pipe a list of
-TIGER/Line county directories to tiger_import on stdin.
+TIGER/Line county directories to tiger_import on stdin. For example,
+the following will install just the data for the state of Delaware:
+
+  $ ls -d /opt/tiger/10_DELAWARE/1* | bin/tiger_import ~/delaware.db
 
 The tiger_import process uses a binary utility, shp2sqlite, which is derived
 from shp2pgsql, which ships with PostGIS. The shp2sqlite utility converts
