@@ -481,9 +481,6 @@ module Geocoder::US
       merge_rows! candidates, places, :zip
 
       assign_number! query, candidates
-
-      # lookup.rst (11)
-      canonicalize_places! candidates if canonicalize
   
       # lookup.rst (7)
       score_candidates! query, candidates
@@ -515,6 +512,9 @@ module Geocoder::US
         record[:lon], record[:lat] = interpolate points, dist
       }
       
+      # lookup.rst (11)
+      canonicalize_places! candidates if canonicalize
+   
       # lookup.rst (12)
       candidates.each {|record| clean_record! record}
       candidates
