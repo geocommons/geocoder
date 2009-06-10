@@ -419,14 +419,17 @@ module Geocoder::US
       places = places_by_city_or_zip query[:city], query[:state], query[:zip]
       return [] if places.empty?
 
+      # lookup.rst (11)
+      # N.B. need to canonicalize places *before* scoring, because
+      # otherwise we end up with odd looking duplicates for
+      # ZIPs that match on the alternate name.
+      canonicalize_places! places if canonicalize
+
       # lookup.rst (7)
       score_candidates! query, places
 
       # lookup.rst (8)
       best_candidates! places 
-
-      # lookup.rst (11)
-      canonicalize_places! places if canonicalize
 
       # uniqify places
       by_name = rows_to_h(places, :city, :state)
