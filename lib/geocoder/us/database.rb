@@ -54,12 +54,16 @@ module Geocoder::US
       (["?"] * list.length).join(",")
     end
 
+  public
+
     # Execute an SQL statement, bind a list of parameters, and
     # return the result as a list of hashes.
     def execute (sql, *params)
       st = prepare(sql) 
       execute_statement st, *params
     end
+
+  private
 
     # Execute an SQLite statement object, bind the parameters,
     # map the column names to symbols, and return the rows
@@ -477,6 +481,9 @@ module Geocoder::US
       merge_rows! candidates, places, :zip
 
       assign_number! query, candidates
+
+      # lookup.rst (11)
+      canonicalize_places! candidates if canonicalize
   
       # lookup.rst (7)
       score_candidates! query, candidates
@@ -508,9 +515,6 @@ module Geocoder::US
         record[:lon], record[:lat] = interpolate points, dist
       }
       
-      # lookup.rst (11)
-      canonicalize_places! candidates if canonicalize
-   
       # lookup.rst (12)
       candidates.each {|record| clean_record! record}
       candidates
