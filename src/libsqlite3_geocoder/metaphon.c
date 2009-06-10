@@ -232,7 +232,10 @@ int metaphone(const char *Word, char *Metaph, int max_phones) {
                         *Metaph++ = 'X';
                     }
                     else if ('H' == *(n + 1))
-                        *Metaph++ = 'O';
+                        /* SDE: was:
+                           *Metaph++ = 'O';
+                           but that's WRONG. */
+                        *Metaph++ = '0';
                     else if (*(n + 1) != 'C' || *(n + 2) != 'H')
                         *Metaph++ = 'T';
                     break;
