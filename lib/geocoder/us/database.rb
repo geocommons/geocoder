@@ -54,12 +54,16 @@ module Geocoder::US
       (["?"] * list.length).join(",")
     end
 
+  public
+
     # Execute an SQL statement, bind a list of parameters, and
     # return the result as a list of hashes.
     def execute (sql, *params)
       st = prepare(sql) 
       execute_statement st, *params
     end
+
+  private
 
     # Execute an SQLite statement object, bind the parameters,
     # map the column names to symbols, and return the rows
