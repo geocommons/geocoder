@@ -73,9 +73,9 @@ We will presume that you are building a Geocoder::US database from TIGER/Line,
 and that you have obtained the complete set of TIGER/Line ZIP files, and put
 the entire tree in /opt/tiger. Please adjust these instructions as needed.
 
-A full TIGER/Line database import takes 1-2 days to run on a normal Amazon EC2
-instance, and takes up a little over 5 gigabytes after all is said and done.
-You will need to have at least 12 gigabytes of free disk space *after*
+A full TIGER/Line database import takes ten hours to run on a normal Amazon
+EC2 instance, and takes up a little over 5 gigabytes after all is said and
+done.  You will need to have at least 12 gigabytes of free disk space *after*
 downloading the TIGER/Line dataset, if you are building the full database. 
 
 === Import TIGER/Line
@@ -86,9 +86,10 @@ From inside the Geocoder::US source tree, run the following:
 
 This will unpack each TIGER/Line ZIP file to a temporary directory, and
 perform the extract/transform/load sequence to incrementally build the
-database. The process takes about a day on a normal Amazon EC2 instance. Note
-that not all TIGER/Line source files contain address range information, so you
-will see error messages for some counties, but this is normal.
+database. The process takes about 10-12 hours on a normal Amazon EC2 instance,
+or about 5 CPU hours flat out on a modern PC. Note that not all TIGER/Line
+source files contain address range information, so you will see error messages
+for some counties, but this is normal.
 
 If you only want to import specific counties, you can pipe a list of
 TIGER/Line county directories to tiger_import on stdin. For example,
@@ -111,10 +112,10 @@ indexes:
 
   $ bin/build_indexes /opt/tiger/geocoder.db
 
-This process will take a few hours, but it's a *lot* faster than building
-the indexes incrementally during the import process. Basically, this process
-simply feeds SQL statements to the sqlite3 utility to construct the indexes on
-the existing database.
+This process takes 25 minutes on an EC2 instance (8 CPU minutes), but it's a
+*lot* faster than building the indexes incrementally during the import
+process. Basically, this process simply feeds SQL statements to the sqlite3
+utility to construct the indexes on the existing database.
 
 === Cluster the database tables (optional)
 
@@ -126,8 +127,7 @@ process will take an hour or two, and may be a micro-optimization.
 
 You will need as much free disk space to run rebuild_cluster as the database
 takes up, because the process essentially reconstructs the database in a new
-file, with the tables sorted by their relevant indexed columns, and then
-it renames the new database over top of the old.
+file, and then it renames the new database over top of the old.
 
 == Running the unit tests
 
