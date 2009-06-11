@@ -483,6 +483,7 @@ module Geocoder::US
       assign_number! query, candidates
 
       # lookup.rst (11)
+      # see note above about canonicalizing places before scoring
       canonicalize_places! candidates if canonicalize
   
       # lookup.rst (7)
@@ -495,12 +496,13 @@ module Geocoder::US
       edge_ids = unique_values candidates, :tlid
       if canonicalize
         records  = primary_records edge_ids
+	# lookup.rst (10a) 
+	merge_rows! candidates, records, :tlid, :zip
       else
         records  = edges edge_ids
+	# lookup.rst (10a) 
+	merge_rows! candidates, records, :tlid
       end        
-
-      # lookup.rst (10a) 
-      merge_rows! candidates, records, :tlid, :zip
 
       # lookup.rst (10b)
       ranges  = rows_to_h all_ranges(edge_ids), :tlid
