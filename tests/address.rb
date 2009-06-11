@@ -187,6 +187,7 @@ class TestAddress < Test::Unit::TestCase
   def test_city_parse
     places = [
       [ "New York, NY",     "New York", "NY", "" ],
+      [ "New York,NY",      "New York", "NY", "" ], # tokenize on comma
       [ "New York",         "New York", "",   "" ],
       [ "Philadelphia",     "Philadelphia", "", "" ],
       [ "Philadelphia PA",  "Philadelphia", "PA", "" ],

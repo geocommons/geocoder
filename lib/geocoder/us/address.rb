@@ -174,7 +174,8 @@ module Geocoder::US
     # Tokenizes the input text on commas and whitespace, and cleans
     # each token.
     def tokens
-      @text.strip.split(/(,)?\s+/o).map{|token| clean token} 
+      @text.strip.split(/(,)|\s+/o).find_all{|token| token.any?} \
+                                   .map{|token| clean token} 
     end
 
     # Expands a token into a list of possible strings based on
