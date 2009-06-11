@@ -4,8 +4,9 @@ TMP="/tmp/navteq-import.$$"
 SHPS="local_streets"
 DBFS=""
 BASE=$(dirname $0)
+PATH=$PATH:$BASE/../bin
 SQL="$BASE/../sql"
-HELPER_LIB="$BASE/../lib/libsqlite3_geocoder.so"
+HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
 DATABASE=$1
 shift
 
