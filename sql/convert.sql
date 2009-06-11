@@ -17,10 +17,12 @@ CREATE TEMPORARY TABLE linezip AS
            WHERE e.mtfcc LIKE 'S%' AND zipl <> "" AND zipl IS NOT NULL
     ) AS whatever;
 
-CREATE INDEX linezip_tlid ON linezip (tlid);
-
 -- generate features from the featnames table for each desired edge
 --   computing the metaphone hash of the name in the process.
+
+CREATE TEMPORARY TABLE sqlite_sequence (
+  name VARCHAR(255),
+  seq INTEGER);
 
 CREATE TEMPORARY TABLE feature_bin (
   fid INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +32,7 @@ CREATE TEMPORARY TABLE feature_bin (
   zip CHAR(5));
 
 UPDATE sqlite_sequence
-    SET seq=(SELECT max(fid)+1 FROM feature)
+    SET seq=(SELECT max(fid) FROM feature)
     WHERE name="feature_bin";
 
 INSERT INTO feature_bin
@@ -39,7 +41,7 @@ INSERT INTO feature_bin
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
 INSERT INTO feature_edge
-    SELECT fid, f.tlid
+    SELECT DISTINCT fid, f.tlid
         FROM linezip l, tiger_featnames f, feature_bin b
         WHERE l.tlid=f.tlid AND l.zip=b.zip
           AND f.fullname=b.street AND f.paflag=b.paflag;
