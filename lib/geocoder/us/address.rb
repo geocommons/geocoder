@@ -34,8 +34,9 @@ module Geocoder::US
     # Tokenizes the input text on commas and whitespace, and cleans
     # each token.
     def tokenize
-      @text.strip.split(/(,)?\s+/o).find_all{|token| token.any?} \
-                                   .map{|token| clean token} 
+      @text.strip.split(/(,)?\s+/o) \
+                 .select {|token| token.any?} \
+                 .map {|token| clean token} 
     end
 
     def match (test, token)
@@ -97,11 +98,12 @@ module Geocoder::US
     # the Geocoder::US::Name_Abbr constant, and expands numerals and
     # number words into their possible equivalents.
     def expand_token (token)
-      if Name_Abbr.key? token and Name_Abbr[token].downcase != token.downcase
-        token_list = [Name_Abbr[token], token]
-      else
-        token_list = [token]
-      end
+      token_list = [token]
+      [Name_Abbr, Std_Abbr].each {|hash|
+        if hash.key? token and hash[token].downcase != token.downcase
+          token_list.unshift hash[token]
+        end
+      }
       if /^\d+(?:st|nd|rd|th)?$/o.match token
         num = token.to_i
       elsif Ordinals[token]
@@ -110,6 +112,7 @@ module Geocoder::US
         num = Cardinals[token]
       end
       token_list = [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
+      token_list.sort! {|a,b| a.length <=> b.length} if token_list.length > 1
       token_list.compact
     end
 
@@ -195,5 +198,9 @@ module Geocoder::US
         @street += additional
       end
       @street
+    end
+
+    def intersection?
+      @tagged.any? {|tag| tag.any? {|t| t == :at}}
     end
 end
