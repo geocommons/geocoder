@@ -20,34 +20,10 @@ CREATE TEMPORARY TABLE linezip AS
 -- generate features from the featnames table for each desired edge
 --   computing the metaphone hash of the name in the process.
 
-CREATE TEMPORARY TABLE sqlite_sequence (
-  name VARCHAR(255),
-  seq INTEGER);
-
-CREATE TEMPORARY TABLE feature_bin (
-  fid INTEGER PRIMARY KEY AUTOINCREMENT,
-  street VARCHAR(100),
-  street_phone VARCHAR(5),
-  paflag BOOLEAN,
-  zip CHAR(5));
-
-UPDATE sqlite_sequence
-    SET seq=(SELECT max(fid) FROM feature)
-    WHERE name="feature_bin";
-
-INSERT INTO feature_bin
-    SELECT DISTINCT NULL, fullname, metaphone(name,5), paflag, zip
+INSERT INTO feature
+    SELECT f.tlid, fullname, metaphone(name,5), paflag, zip
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
-
-INSERT INTO feature_edge
-    SELECT DISTINCT fid, f.tlid
-        FROM linezip l, tiger_featnames f, feature_bin b
-        WHERE l.tlid=f.tlid AND l.zip=b.zip
-          AND f.fullname=b.street AND f.paflag=b.paflag;
-
-INSERT INTO feature
-    SELECT * FROM feature_bin;
 
 -- generate edges from the edges table for each desired edge, running
 --   a simple compression on the WKB geometry (because they're all
