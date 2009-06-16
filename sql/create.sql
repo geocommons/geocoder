@@ -21,12 +21,6 @@ CREATE TABLE feature (
   tlid INTEGER(10),
   street VARCHAR(100),
   street_phone VARCHAR(5),
-  predir VARCHAR(2),
-  pretyp VARCHAR(3),
-  prequal VARCHAR(2),
-  sufdir VARCHAR(2),
-  suftyp VARCHAR(3),
-  sufqual VARCHAR(2),
   paflag BOOLEAN,
   zip CHAR(5));
 -- 'range' stores the address range(s) for each edge.

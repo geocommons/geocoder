@@ -19,9 +19,9 @@ CREATE TEMPORARY TABLE linezip AS
 
 -- generate features from the featnames table for each desired edge
 --   computing the metaphone hash of the name in the process.
+
 INSERT INTO feature
-    SELECT l.tlid, name, metaphone(name,5), predirabrv, pretypabrv,
-           prequalabr, sufdirabrv, suftypabrv, sufqualabr, paflag, zip
+    SELECT f.tlid, fullname, metaphone(name,5), paflag, zip
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
