@@ -8,10 +8,12 @@ module Geocoder::US
   class Map < Hash
     # The Map class provides a two-way mapping between postal abbreviations
     # and their fully written equivalents.
-    attr_accessor :partial
+    #attr_accessor :partial
+    attr_accessor :match
     def self.[] (*items)
       hash = super(*items)
-      hash.build_partial
+      #hash.build_partial
+      hash.build_match
       hash.keys.each {|k| hash[k.downcase] = hash.fetch(k)}
       hash.values.each {|v| hash[v.downcase] = v}
       hash.freeze
@@ -24,6 +26,11 @@ module Geocoder::US
         @partial << item.downcase
         item.downcase.split.each {|token| @partial << token}
       }
+    end
+    def build_match
+      @match = Regexp.new(
+        '\b(' + [keys,values].flatten.join("|") + ')\b',
+        Regexp::IGNORECASE)
     end
     # The partial? method returns true if the key is a prefix of some
     # key in the Map.
