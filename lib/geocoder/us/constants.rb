@@ -21,10 +21,8 @@ module Geocoder::US
     def build_partial
       @partial = Set.new()
       [keys, values].flatten.each {|item|
-        tokens = item.downcase.split
-        tokens.each_index {|i|
-          @partial << tokens[0..i].join(" ")
-        }
+        @partial << item.downcase
+        item.downcase.split.each {|token| @partial << token}
       }
     end
     # The partial? method returns true if the key is a prefix of some
@@ -466,6 +464,11 @@ module Geocoder::US
     "Trailer"	=> "Trlr",
     "Unit"	=> "Unit",
     "Upper"	=> "Uppr",
+  ]
+
+  Std_Abbr = Map[
+    [Directional, Prefix_Qualifier, Suffix_Qualifier,
+     Prefix_Type, Suffix_Type, Unit_Type].inject({}) {|x,y|x.merge y}
   ]
 
   # The Name_Abbr constant maps common toponym abbreviations to their
