@@ -23,6 +23,7 @@ module Geocoder::US
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
+      @memo = {}
       tune helper, cache_size;
     end
 
@@ -91,14 +92,15 @@ module Geocoder::US
     # tables for a street name and optional building number. The SQL is
     # used by candidate_records and more_candidate_records to filter results
     # by ZIP code.
-    def candidate_records_query (street, number=nil)
+    def candidate_records_query (streets, number=nil)
+      metaphones = (["metaphone(?,5)"] * list.length).join(",")
       sql = "
         SELECT feature.*, range.*
           FROM feature, range
-          WHERE street_phone = metaphone(?,5)
+          WHERE street_phone IN #{metaphones}
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip"
-      params = [street]
+      params = streets.clone
       unless number.nil?
         sql += "
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
@@ -147,10 +149,7 @@ module Geocoder::US
     # a list of edge IDs.
     def primary_records (edge_ids)
       in_list = placeholders_for edge_ids
-      # TODO: the DISTINCT is needed because some TLIDs get duplicated
-      # in the edge table... the right way to fix this is to remove
-      # them after import; sigh
-      sql = "SELECT DISTINCT feature.*, edge.*
+      sql = "SELECT feature.*, edge.*
                FROM feature, edge
                WHERE feature.tlid IN (#{in_list})
                AND paflag = 'P'
@@ -211,12 +210,11 @@ module Geocoder::US
     # number is inside the candidate range, set the number on the result
     # and set the precision to :range; otherwise, find the closest
     # corner and set precision to :street.
-    def assign_number! (query, candidates)
-      hn = query[:number].to_i
+    def assign_number! (hn, candidates)
       for candidate in candidates
         fromhn, tohn = candidate[:fromhn].to_i, candidate[:tohn].to_i
         if (hn >= fromhn and hn <= tohn) or (hn <= fromhn and hn >= tohn)
-          candidate[:number] = query[:number]
+          candidate[:number] = hn.to_s
           candidate[:precision] = :range
         else
           candidate[:number] = ((hn - fromhn).abs < (hn - tohn).abs ?
@@ -224,6 +222,23 @@ module Geocoder::US
           candidate[:precision] = :street
         end
       end
+    end
+
+    def clear_memo
+      @memo = {}
+    end
+
+    def edit_distance (str1, str2)
+      a, b = [str1,str2].map{|x| x.downcase}
+      score = @memo[a+":"+b] 
+      return score if score
+      if a == b
+        distance = 0.0
+      else
+        distance = Text::Levenshtein.distance(a,b)
+      end
+      score = distance.to_f / [a.length,b.length].max
+      @memo[a+":"+b] = score
     end
 
     # Score a list of candidates. For each candidate:
@@ -240,40 +255,23 @@ module Geocoder::US
     # * Finally, divide the score by the total number of comparisons.
     #   The result should be between 0.0 and 1.0, with 1.0 indicating a
     #   perfect match.
-    def score_candidates! (query, candidates)
+    def score_candidates! (address, candidates)
       for candidate in candidates
-        score = 0
-        compare = query.keys - [:number]
-        # deduct from the score for query penalty
-        denominator = compare.length + query.penalty
+        compare = [:number, :street, :city, :state, :zip]
+        denominator = compare.length
+        score = denominator
 
-        compare.each {|k| 
-          if query[k].nil? or query[k].empty?
-            if candidate[k].nil? or candidate[k].empty?
-              score += 1
-            else
-              score += 0.15
-            end
-            next
-          end
-          next if candidate[k].nil?
-          # lowercase and eliminate non-word chars before comparison
-          a, b = [query,candidate].map{|x| x[k].downcase.gsub(/\W/o, "")}
-          if a == b
-            # lookup.rst (7a)
-            score += 1 
-          else
-            # lookup.rst (7b)
-            distance = Text::Levenshtein.distance(a,b)
-            score += 1.0 - distance.to_f / [a.length,b.length].max
-          end
-        }
+        # FIXME: prenum
+        # FIXME: number is nil
+        text = "#{candidate[:number]} #{candidate[:street]}," \
+               "#{candidate[:city]}, #{candidate[:state]} #{candidate[:zip]}"
+        score *= 1.0 - edit_distance(address.text, text)
 
-        # lookup.rst (7c)
-        unless query[:number].nil? or query[:number].empty?
+        # FIXME: I get the feeling that this doesn't belong here anymore
+        unless address.number.nil? or address.number.empty?
           fromhn, tohn, hn = [candidate[:fromhn], 
                               candidate[:tohn], 
-                              query[:number]].map {|s|s.to_i}
+                              address.number].map {|s|s.to_i}
           score += 0.5 if fromhn % 2 == hn % 2
           score += 0.5 if tohn % 2 == hn % 2
           if candidate[:precision] == :range
@@ -284,7 +282,6 @@ module Geocoder::US
           denominator += 2
         end
 
-        # lookup.rst (7d)
         candidate[:score] = score.to_f / denominator
       end
     end
@@ -445,35 +442,35 @@ module Geocoder::US
     # range interpolation. If canonicalize is true, attempt to return the
     # "primary" street and place names, if they are different from the ones
     # given.
-    def geocode_address (query, canonicalize=true)
+    def geocode_address (address, canonicalize=true)
       # lookup.rst (1)
       places = []
 
       # lookup.rst (2) and (3) together -- index does fine
-      places = places_by_city_or_zip query[:city], query[:state], query[:zip]
+      places = places_by_city_or_zip address.city, address.state, address.zip
 
       # lookup.rst (4)
       zips = unique_values places, :zip
 
       # lookup.rst (5)
-      candidates = candidate_records query[:number], query[:street], zips
+      candidates = candidate_records address.number, address.street, zips
 
       if candidates.empty?
         # no exact range match?
-        candidates = candidate_records nil, query[:street], zips
+        candidates = candidate_records nil, address.street, zips
       end
      
       # lookup.rst (6)
       # -- this takes too long for certain streets...
       if candidates.empty?
-        candidates = more_candidate_records query[:number], query[:street], zips
+        candidates = more_candidate_records address.number, address.street, zips
       end
       return [] if candidates.empty?
 
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip
 
-      assign_number! query, candidates
+      assign_number! address.number.to_i, candidates
   
       # lookup.rst (7)
       score_candidates! query, candidates
@@ -498,7 +495,7 @@ module Geocoder::US
       candidates.map {|record|
         # lookup.rst (10c) & (10d)
         side_ranges = ranges_for_record ranges, record
-        dist = interpolation_distance( query[:number].to_i, side_ranges )
+        dist = interpolation_distance( address.number.to_i, side_ranges )
         # TODO: implement lookup.rst (10e) & (10g) (projection)
         # lookup.rst (10f) & (10h)
         points = unpack_geometry record[:geometry]
