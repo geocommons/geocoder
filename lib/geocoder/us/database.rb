@@ -18,12 +18,13 @@ module Geocoder::US
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
     def initialize (filename,
-                    helper="sqlite3.so", cache_size=50000)
+                    helper="sqlite3.so", cache_size=50000, debug=false)
       raise ArgumentError, "can't find database #{filename}" \
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
       @memo = {}
+      @debug = debug
       tune helper, cache_size;
     end
 
@@ -46,7 +47,7 @@ module Geocoder::US
     # Return a cached SQLite statement object, preparing it first if
     # it's not already in the cache.
     def prepare (sql)
-      print "SQL: #{sql}\n"
+      print "SQL: #{sql}\n" if @debug
       @st[sql] ||= @db.prepare sql
       return @st[sql]
     end
@@ -72,7 +73,7 @@ module Geocoder::US
     # map the column names to symbols, and return the rows
     # as a list of hashes.
     def execute_statement (st, *params)
-      print "EXEC: #{params.inspect}\n"
+      print "EXEC: #{params.inspect}\n" if @debug
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
       rows = []
@@ -89,7 +90,7 @@ module Geocoder::US
         args = [zip] + cities
       else
         and_state = "AND state = ?"
-        args = [zip]+cities+[state]
+        args = [zip] + cities + [state]
       end
       metaphones = metaphone_placeholders_for cities
       execute("SELECT * FROM place WHERE zip = ? or (
@@ -472,7 +473,7 @@ module Geocoder::US
       end
       return [] if candidates.empty?
 
-      print "RECORDS: #{candidates.length}\n"
+      print "RECORDS: #{candidates.length}\n" if @debug
 
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip

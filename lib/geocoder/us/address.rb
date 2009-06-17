@@ -18,12 +18,15 @@ module Geocoder::US
     attr_accessor :text
     attr_accessor :prenum
     attr_accessor :number
+    attr_accessor :sufnum
     attr_accessor :state
     attr_accessor :zip
+    attr_accessor :plus4
    
     # Takes an address or place name string as its sole argument.
     def initialize (text)
       @text = clean text
+      @prenum = @number = @sufnum = @state = @zip = @plus4 = ""
       parse
     end
 
@@ -62,24 +65,27 @@ module Geocoder::US
 
       @zip = text.scan(Match[:zip])[-1]
       if @zip
+        # FIXME: What if this string appears twice?
         text[$&] = ""
+        text.sub! /\s*,?\s*$/o, ""
         @zip, @plus4 = @zip.map {|s|s.strip}
       end
-      text.sub! /\s*,?\s*$/o, ""
 
       @state = text.scan(Match[:state])[-1]
       if @state
+        # FIXME: What if this string appears twice?
         text[$&] = ""
+        text.sub! /\s*,?\s*$/o, ""
         @state = State[@state[0].strip]
       end
-      text.sub! /\s*,?\s*$/o, ""
 
       @number = text.scan(Match[:number])[0]
-      if @number
+      if @number and not intersection?
+        # FIXME: What if this string appears twice?
         text[$&] = ""
-        @prenum, @number, @sufnum = @number
+        text.sub! /^\s*,?\s*/o, ""
+        @prenum, @number, @sufnum = @number.map {|s| s.strip}
       end
-      text.sub! /^\s*,?\s*/o, ""
 
       # FIXME: special case: detect when @street contains
       # only abbrs, and when it does, stick the number back
@@ -110,11 +116,17 @@ module Geocoder::US
 
     def street
       strings = []
+      # Get all the substrings delimited by whitespace
       @street.each {|string|
         tokens = string.split(" ")
         strings |= (0...tokens.length).map {|i|
                    (i...tokens.length).map {|j| tokens[i..j].join(" ")}}.flatten
       }
+      # Don't return strings that consist solely of abbreviations.
+      # NOTE: Is this a micro-optimization that has edge cases that will break?
+      strings.delete_if {|s| Std_Abbr[s] == s}
+      # Start with the substrings that contain the most tokens, and
+      # then proceed in order of "most abbreviated"
       strings.sort {|a,b|
         cmp = b.count(" ") <=> a.count(" ")
         cmp = a.length <=> b.length if cmp == 0
@@ -135,7 +147,13 @@ module Geocoder::US
     def city= (string)
       @city = [string.clone]
       match = Regexp.new('\s*' + string + '\s*')
+      # FIXME: This should only delete the *last* occurrence.
+      # invented edge case: 300 Detroit St, Detroit MI
       @street = @street.map {|string| string.gsub(match, "")}.select {|s|s.any?}
+    end
+
+    def intersection?
+      Match[:at].match @text
     end
   end
 end
