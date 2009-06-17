@@ -17,17 +17,16 @@ module Geocoder::US
   # string.
   class Address
     attr_accessor :text
-    attr_accessor :prenum
-    attr_accessor :number
-    attr_accessor :sufnum
+    attr_accessor :prenum, :number, :sufnum
+    attr_accessor :street
+    attr_accessor :city
     attr_accessor :state
-    attr_accessor :zip
-    attr_accessor :plus4
+    attr_accessor :zip, :plus4
    
     # Takes an address or place name string as its sole argument.
     def initialize (text)
+      raise ArgumentError, "no text provided" unless text and text.any?
       @text = clean text
-      @prenum = @number = @sufnum = @state = @zip = @plus4 = ""
       parse
     end
 
@@ -70,6 +69,8 @@ module Geocoder::US
         text[$&] = ""
         text.sub! /\s*,?\s*$/o, ""
         @zip, @plus4 = @zip.map {|s|s.strip}
+      else
+        @zip = @plus4 = ""
       end
 
       @state = text.scan(Match[:state])[-1]
@@ -78,6 +79,8 @@ module Geocoder::US
         text[$&] = ""
         text.sub! /\s*,?\s*$/o, ""
         @state = State[@state[0].strip]
+      else
+        @state = ""
       end
 
       @number = text.scan(Match[:number])[0]
@@ -86,6 +89,8 @@ module Geocoder::US
         text[$&] = ""
         text.sub! /^\s*,?\s*/o, ""
         @prenum, @number, @sufnum = @number.map {|s| s and s.strip}
+      else
+        @prenum = @number = @sufnum = ""
       end
 
       # FIXME: special case: detect when @street contains
@@ -96,26 +101,35 @@ module Geocoder::US
       # about replacing St with Saint. exceptional case:
       # Sault Ste. Marie
 
-      @street = text.scan(Match[:street]).map {|s|s.strip}
-      @street.map! {|item| expand_numbers(item)}
-      @street.flatten!
-      add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
-      @street |= add
-      add = @street.map {|item| item.gsub(Std_Abbr.regexp) {|m| Std_Abbr[m]}}
-      @street |= add
-      # unfortunate artifact due to \b and S regexping "south"
-      # and a lack of regexp lookbehind in Ruby
-      @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
-      
-      @city = text.scan(Match[:city])[-1].map {|s|s.strip}
-      add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
-      @city |= add
-      @city.reverse!
+      @street = text.scan(Match[:street])
+      if @street
+        @street.map! {|s|s.strip}
+        @street.map! {|item| expand_numbers(item)}
+        @street.flatten!
+        add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
+        @street |= add
+        add = @street.map {|item| item.gsub(Std_Abbr.regexp) {|m| Std_Abbr[m]}}
+        @street |= add
+        # unfortunate artifact due to \b and S regexping "south"
+        # and a lack of regexp lookbehind in Ruby
+        @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
+      else
+        @street = []
+      end
+        
+      @city = text.scan(Match[:city])
+      if @city
+        @city.map! {|s|s.strip}
+        add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
+        @city |= add
+      else
+        @city = []
+      end
 
       self.city= @city[0] if @city.length == 1
     end
 
-    def street
+    def street_parts
       strings = []
       # Get all the substrings delimited by whitespace
       @street.each {|string|
@@ -135,22 +149,25 @@ module Geocoder::US
       }
     end
   
-    def city
+    def city_parts
       strings = []
       @city.map {|string|
         tokens = string.split(" ")
         strings |= (0...tokens.length).to_a.reverse.map {|i|
                    (i...tokens.length).map {|j| tokens[i..j].join(" ")}}.flatten
       }
+      # Don't return strings that consist solely of abbreviations.
+      # NOTE: Is this a micro-optimization that has edge cases that will break?
+      strings.delete_if {|s| Std_Abbr[s] == s}
       strings
     end
 
     def city= (string)
       @city = [string.clone]
-      match = Regexp.new('\s*' + string + '\s*')
+      match = Regexp.new('(.*)\s*' + string + '\s*', Regexp::IGNORECASE)
       # FIXME: This should only delete the *last* occurrence.
       # invented edge case: 300 Detroit St, Detroit MI
-      @street = @street.map {|string| string.gsub(match, "")}.select {|s|s.any?}
+      @street = @street.map {|string| string.gsub(match, '\1')}.select {|s|s.any?}
     end
 
     def intersection?
