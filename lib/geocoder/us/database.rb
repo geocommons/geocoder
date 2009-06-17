@@ -27,7 +27,7 @@ module Geocoder::US
       tune helper, cache_size;
     end
 
-  private
+  #private
 
     # Load the SQLite extension and tune the database settings.
     # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
@@ -46,6 +46,7 @@ module Geocoder::US
     # Return a cached SQLite statement object, preparing it first if
     # it's not already in the cache.
     def prepare (sql)
+      print "SQL: #{sql}\n"
       @st[sql] ||= @db.prepare sql
       return @st[sql]
     end
@@ -53,6 +54,11 @@ module Geocoder::US
     # Generate enough SQL placeholders for a list of objects.
     def placeholders_for (list)
       (["?"] * list.length).join(",")
+    end
+
+    # Generate enough SQL placeholders for a list of objects.
+    def metaphone_placeholders_for (list)
+      (["metaphone(?,5)"] * list.length).join(",")
     end
 
     # Execute an SQL statement, bind a list of parameters, and
@@ -66,6 +72,7 @@ module Geocoder::US
     # map the column names to symbols, and return the rows
     # as a list of hashes.
     def execute_statement (st, *params)
+      print "EXEC: #{params.inspect}\n"
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
       rows = []
@@ -76,16 +83,17 @@ module Geocoder::US
     # Query the place table for by city, optional state, and zip.
     # The metaphone index on the place table is used to match
     # city names.
-    def places_by_city_or_zip (city, state, zip)
+    def places_by_city_or_zip (cities, state, zip)
       if state.nil? or state.empty?
         and_state = ""
-        args = [zip,city]
+        args = [zip] + cities
       else
         and_state = "AND state = ?"
-        args = [zip,city,state]
+        args = [zip]+cities+[state]
       end
+      metaphones = metaphone_placeholders_for cities
       execute("SELECT * FROM place WHERE zip = ? or (
-                city_phone = metaphone(?,5) #{and_state})", *args)
+                city_phone IN (#{metaphones}) #{and_state})", *args)
     end
 
     # Generate an SQL query and set of parameters against the feature and range
@@ -93,11 +101,11 @@ module Geocoder::US
     # used by candidate_records and more_candidate_records to filter results
     # by ZIP code.
     def candidate_records_query (streets, number=nil)
-      metaphones = (["metaphone(?,5)"] * list.length).join(",")
+      metaphones = (["metaphone(?,5)"] * streets.length).join(",")
       sql = "
         SELECT feature.*, range.*
           FROM feature, range
-          WHERE street_phone IN #{metaphones}
+          WHERE street_phone IN (#{metaphones})
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip"
       params = streets.clone
@@ -141,7 +149,7 @@ module Geocoder::US
     # Query the edge table for a list of edges matching a list of edge IDs.
     def edges (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = "SELECT DISTINCT edge.* FROM edge WHERE edge.tlid IN (#{in_list});"
+      sql = "SELECT edge.* FROM edge WHERE edge.tlid IN (#{in_list});"
       execute sql, *edge_ids
     end
 
@@ -211,6 +219,7 @@ module Geocoder::US
     # and set the precision to :range; otherwise, find the closest
     # corner and set precision to :street.
     def assign_number! (hn, candidates)
+      hn = 0 unless hn
       for candidate in candidates
         fromhn, tohn = candidate[:fromhn].to_i, candidate[:tohn].to_i
         if (hn >= fromhn and hn <= tohn) or (hn <= fromhn and hn >= tohn)
@@ -257,14 +266,14 @@ module Geocoder::US
     #   perfect match.
     def score_candidates! (address, candidates)
       for candidate in candidates
-        compare = [:number, :street, :city, :state, :zip]
+        compare = [:street, :city, :state, :zip]
         denominator = compare.length
         score = denominator
 
         # FIXME: prenum
         # FIXME: number is nil
-        text = "#{candidate[:number]} #{candidate[:street]}," \
-               "#{candidate[:city]}, #{candidate[:state]} #{candidate[:zip]}"
+        text = "#{candidate[:street]}, #{candidate[:city]}, " + \
+               "#{candidate[:state]} #{candidate[:zip]}"
         score *= 1.0 - edit_distance(address.text, text)
 
         # FIXME: I get the feeling that this doesn't belong here anymore
@@ -408,7 +417,7 @@ module Geocoder::US
     # Given an Address object, return a list of possible geocodes by place
     # name. If canonicalize is true, attempt to return the "primary" postal
     # place name for the given city, state, or ZIP.
-    def geocode_place (query, canonicalize=true)
+    def geocode_place (query, canonicalize=false)
       # lookup.rst (1)
       places = []
 
@@ -442,17 +451,14 @@ module Geocoder::US
     # range interpolation. If canonicalize is true, attempt to return the
     # "primary" street and place names, if they are different from the ones
     # given.
-    def geocode_address (address, canonicalize=true)
-      # lookup.rst (1)
+    def geocode_address (address, canonicalize=false)
       places = []
 
-      # lookup.rst (2) and (3) together -- index does fine
       places = places_by_city_or_zip address.city, address.state, address.zip
 
-      # lookup.rst (4)
       zips = unique_values places, :zip
 
-      # lookup.rst (5)
+      # FIXME: this is the point at which we should be setting address.city=
       candidates = candidate_records address.number, address.street, zips
 
       if candidates.empty?
@@ -460,52 +466,42 @@ module Geocoder::US
         candidates = candidate_records nil, address.street, zips
       end
      
-      # lookup.rst (6)
       # -- this takes too long for certain streets...
       if candidates.empty?
         candidates = more_candidate_records address.number, address.street, zips
       end
       return [] if candidates.empty?
 
+      print "RECORDS: #{candidates.length}\n"
+
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip
 
       assign_number! address.number.to_i, candidates
   
-      # lookup.rst (7)
-      score_candidates! query, candidates
+      score_candidates! address, candidates
 
-      # lookup.rst (8)
       best_candidates! candidates 
 
-      # lookup.rst (9)
       edge_ids = unique_values candidates, :tlid
       if canonicalize
         records  = primary_records edge_ids
+        merge_rows! candidates, records, :tlid, :zip
       else
         records  = edges edge_ids
+        merge_rows! candidates, records, :tlid
       end        
 
-      # lookup.rst (10a) 
-      merge_rows! candidates, records, :tlid, :zip
-
-      # lookup.rst (10b)
       ranges  = rows_to_h all_ranges(edge_ids), :tlid
-
       candidates.map {|record|
-        # lookup.rst (10c) & (10d)
         side_ranges = ranges_for_record ranges, record
         dist = interpolation_distance( address.number.to_i, side_ranges )
-        # TODO: implement lookup.rst (10e) & (10g) (projection)
-        # lookup.rst (10f) & (10h)
         points = unpack_geometry record[:geometry]
         record[:lon], record[:lat] = interpolate points, dist
       }
       
-      # lookup.rst (11)
       canonicalize_places! candidates if canonicalize
-   
-      # lookup.rst (12)
+
       candidates.each {|record| clean_record! record}
       candidates
     end
