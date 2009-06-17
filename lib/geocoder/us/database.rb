@@ -168,7 +168,7 @@ module Geocoder::US
     # Query the edge table for a list of edges matching a list of edge IDs.
     def edges (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = "SELECT edge.* FROM edge WHERE edge.tlid IN (#{in_list});"
+      sql = "SELECT edge.* FROM edge WHERE edge.tlid IN (#{in_list})"
       execute sql, *edge_ids
     end
 
@@ -241,7 +241,7 @@ module Geocoder::US
         places = places_by_zip address.text, address.zip
         if places.any?
           cities = unique_values places, :city
-          cities.each {|city| address.city = city}
+          #cities.each {|city| address.city = city}
           candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
         end
       end
@@ -249,7 +249,7 @@ module Geocoder::US
       if candidates.empty?
         places = places_by_city address.text, address.city_parts, address.state
         cities = unique_values places, :city
-        cities.each {|city| address.city = city}
+        #cities.each {|city| address.city = city}
         zips = unique_values places, :zip
         candidates = candidate_records address.number, address.text, address.street_parts, zips
       end
@@ -523,25 +523,35 @@ module Geocoder::US
     end
 
     def find_intersections (candidates)
+      points = {}
       intersects = []
-      (0...candidates.length).each {|i|
-        record1 = candidates[i]
-        a, b = record1[:geometry][0], record1[:geometry][-1]
-        (i+1...candidates.length).each {|j|
-          record2 = candidates[j]
-          next if record1[:tlid] == record2[:tlid]
-          c, d = record2[:geometry][0], record2[:geometry][-1]
-          x, y, angle = intersecting_angle a, b, c, d
-          next unless angle
-          record = record1.clone
-          record[:street1] = record.delete(:street)
-          record[:street2] = record2[:street]
-          record[:street_score] = (
-            record1[:street_score].to_f+record2[:street_score].to_f)/2
-          record[:lon] = x
-          record[:lat] = y
-          record[:intersect_score] = (Math::PI-2*angle).abs/Math::PI
-          intersects << record
+      candidates.each {|record|
+        [record[:geometry][0], record[:geometry][-1]].each {|point|
+          points[point] ||= []
+          points[point] << record
+        }
+      }
+      points.values.each {|recordset|
+        recordset.each_index {|i|
+          record1 = recordset[i]
+          a, b = record1[:geometry][0], record1[:geometry][-1]
+          (i+1...recordset.length).each {|j|
+            record2 = candidates[j]
+            next if record1[:tlid] == record2[:tlid] \
+                 or record1[:street] == record2[:street]
+            c, d = record2[:geometry][0], record2[:geometry][-1]
+            x, y, angle = intersecting_angle a, b, c, d
+            next unless angle
+            record = record1.clone
+            record[:street1] = record.delete(:street)
+            record[:street2] = record2[:street]
+            record[:street_score] = (
+              record1[:street_score].to_f+record2[:street_score].to_f)/2
+            record[:lon] = x
+            record[:lat] = y
+            record[:intersect_score] = (Math::PI-2*angle).abs/Math::PI
+            intersects << record
+          }
         }
       }
       intersects
