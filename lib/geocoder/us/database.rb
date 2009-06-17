@@ -1,7 +1,9 @@
 require 'rubygems'
 require 'sqlite3'
-require 'set'
 require 'text'
+
+require 'set'
+require 'time'
 
 require 'geocoder/us/address'
 
@@ -17,15 +19,16 @@ module Geocoder::US
     # directory as database.rb by default. The cache_size argument is
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
-    def initialize (filename,
-                    helper="sqlite3.so", cache_size=50000, debug=false)
+    def initialize (filename, options)
+      defaults = {:debug => :false, :cache_size => 50000, :helper => "sqlite3.so"} 
+      options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
       @memo = {}
-      @debug = debug
-      tune helper, cache_size;
+      @debug = options[:debug]
+      tune options[:helper], options[:cache_size]
     end
 
   #private
@@ -47,7 +50,7 @@ module Geocoder::US
     # Return a cached SQLite statement object, preparing it first if
     # it's not already in the cache.
     def prepare (sql)
-      print "SQL: #{sql}\n" if @debug
+      print "SQL : #{sql}\n" if @debug
       @st[sql] ||= @db.prepare sql
       return @st[sql]
     end
@@ -73,12 +76,23 @@ module Geocoder::US
     # map the column names to symbols, and return the rows
     # as a list of hashes.
     def execute_statement (st, *params)
-      print "EXEC: #{params.inspect}\n" if @debug
+      if @debug
+        start = Time.now
+        print "EXEC: #{params.inspect}\n"
+      end
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
       rows = []
       result.each {|row| rows << Hash[*(columns.zip(row).flatten)]}
+      if @debug
+        runtime = format("%.3f", Time.now - start)
+        print "ROWS: #{rows.length} (#{runtime}s)\n" if @debug
+      end
       rows
+    end
+
+    def places_by_zip (zip)
+      execute("SELECT * FROM place WHERE zip = ?", zip)
     end
 
     # Query the place table for by city, optional state, and zip.
@@ -272,7 +286,6 @@ module Geocoder::US
         score = denominator
 
         # FIXME: prenum
-        # FIXME: number is nil
         text = "#{candidate[:street]}, #{candidate[:city]}, " + \
                "#{candidate[:state]} #{candidate[:zip]}"
         score *= 1.0 - edit_distance(address.text, text)
@@ -453,14 +466,22 @@ module Geocoder::US
     # "primary" street and place names, if they are different from the ones
     # given.
     def geocode_address (address, canonicalize=false)
+      start_time = Time.now if @debug
       places = []
 
-      places = places_by_city_or_zip address.city, address.state, address.zip
-
-      zips = unique_values places, :zip
-
       # FIXME: this is the point at which we should be setting address.city=
-      candidates = candidate_records address.number, address.street, zips
+      # FIXME: start looking for intersections here?
+      # FIXME: include prenum in lookup if available
+      if address.zip.any?
+        candidates = candidate_records address.number, address.street, [address.zip]
+        places = places_by_zip address.zip if candidates.any?
+      end
+
+      if candidates.empty?
+        places = places_by_city_or_zip address.city, address.state, address.zip
+        zips = unique_values places, :zip
+        candidates = candidate_records address.number, address.street, zips
+      end
 
       if candidates.empty?
         # no exact range match?
@@ -471,17 +492,20 @@ module Geocoder::US
       if candidates.empty?
         candidates = more_candidate_records address.number, address.street, zips
       end
-      return [] if candidates.empty?
 
-      print "RECORDS: #{candidates.length}\n" if @debug
+      # FIXME: we already geocoded the place. score and return it.
+      return [] if candidates.empty?
 
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip
 
+      # FIXME: this is the point we should be looking for intersections.
       assign_number! address.number.to_i, candidates
   
       score_candidates! address, candidates
 
+      # FIXME: if no number is assigned in the query, only return one
+      # result for each street/zip combo
       best_candidates! candidates 
 
       edge_ids = unique_values candidates, :tlid
@@ -504,6 +528,11 @@ module Geocoder::US
       canonicalize_places! candidates if canonicalize
 
       candidates.each {|record| clean_record! record}
+
+      if @debug
+        runtime = format("%.3f", Time.now - start_time)
+        print "DONE: #{runtime}s\n"
+      end
       candidates
     end
 

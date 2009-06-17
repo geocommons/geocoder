@@ -3,6 +3,7 @@ require 'geocoder/us/constants'
 module Geocoder::US
   # Defines the matching of parsed address tokens.
   Match = {
+    # FIXME: shouldn't have to anchor :number and :zip at start/end
     :number   => /^(\d+\W|[a-z]+)?(\d+)([a-z]?)\b/io,
     :street   => /(?:(?:\d+\w*|[a-z'-]+)\s*)+/io,
     :city     => /(?:[a-z'-]+\s*)+/io,
@@ -84,7 +85,7 @@ module Geocoder::US
         # FIXME: What if this string appears twice?
         text[$&] = ""
         text.sub! /^\s*,?\s*/o, ""
-        @prenum, @number, @sufnum = @number.map {|s| s.strip}
+        @prenum, @number, @sufnum = @number.map {|s| s and s.strip}
       end
 
       # FIXME: special case: detect when @street contains
