@@ -11,10 +11,11 @@ module Geocoder
 end
 
 module Geocoder::US
-  Address_Weight = 5
-
   # Provides an interface to a Geocoder::US database.
   class Database
+    Address_Weight = 1.0
+    City_Weight = 1.0
+
     # Takes the path of an SQLite 3 database prepared for Geocoder::US
     # as the sole mandatory argument. The helper argument points to the
     # Geocoder::US SQLite plugin; the module looks for this in the same
@@ -127,7 +128,7 @@ module Geocoder::US
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip"
       params = [street] + tokens.clone
-      unless number.nil?
+      if number and number.any?
         sql += "
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
            OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))" 
@@ -231,6 +232,43 @@ module Geocoder::US
       dest.flatten!
     end
 
+    def find_candidates (address)
+      places = []
+      candidates = []
+
+      # FIXME: include prenum in lookup if available
+      if address.zip.any?
+        places = places_by_zip address.text, address.zip
+        if places.any?
+          cities = unique_values places, :city
+          cities.each {|city| address.city = city}
+          candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
+        end
+      end
+
+      if candidates.empty?
+        places = places_by_city address.text, address.city_parts, address.state
+        cities = unique_values places, :city
+        cities.each {|city| address.city = city}
+        zips = unique_values places, :zip
+        candidates = candidate_records address.number, address.text, address.street_parts, zips
+      end
+
+      if candidates.empty?
+        # no exact range match?
+        candidates = candidate_records nil, address.text, address.street_parts, zips
+      end
+     
+      # -- this takes too long for certain streets...
+      if candidates.empty?
+        candidates = more_candidate_records address.number, address.text, address.street_parts, zips
+      end
+
+      # need to join up places and candidates here
+      merge_rows! candidates, places, :zip
+      candidates
+    end
+
     # Given a query hash and a list of candidates, assign :number
     # and :precision values to each candidate. If the query building
     # number is inside the candidate range, set the number on the result
@@ -251,23 +289,6 @@ module Geocoder::US
       end
     end
 
-    def clear_memo
-      @memo = {}
-    end
-
-    def edit_distance (str1, str2)
-      a, b = [str1,str2].map{|x| x.downcase}
-      score = @memo[a+":"+b] 
-      return score if score
-      if a == b
-        distance = 0.0
-      else
-        distance = Text::Levenshtein.distance(a,b)
-      end
-      score = distance.to_f / [a.length,b.length].max
-      @memo[a+":"+b] = score
-    end
-
     # Score a list of candidates. For each candidate:
     # * For each item in the query:
     # ** if the query item is blank but the candidate is not, score 0.15;
@@ -284,20 +305,18 @@ module Geocoder::US
     #   perfect match.
     def score_candidates! (address, candidates)
       for candidate in candidates
-        compare = [:city, :state, :zip]
-        denominator = compare.length + Address_Weight
+        compare = [:prenum, :state, :zip]
+        denominator = compare.length + Address_Weight + City_Weight
 
-        # FIXME: prenum
-        # text = "#{candidate[:street]}, #{candidate[:city]}, " + \
-        #        "#{candidate[:state]} #{candidate[:zip]}"
-        # score *= 1.0 - edit_distance(address.text, text)
         score = (1.0 - candidate[:street_score].to_f) * Address_Weight
-        score += 1.0 - candidate[:city_score].to_f
-        score += 1 if address.state == candidate[:state]
-        score += 1 if address.zip == candidate[:zip]
-        
-        # FIXME: I get the feeling that this doesn't belong here anymore
-        unless address.number.nil? or address.number.empty?
+        score += (1.0 - candidate[:city_score].to_f) * City_Weight
+        compare.each {|key| score += 1 if address.send(key) == candidate[key]}
+
+        if candidate[:intersect_score] 
+          score += 1.0 - candidate[:intersect_score]
+          denominator += 1
+        elsif address.number and address.number.any?
+          # FIXME: I get the feeling that this doesn't belong here anymore
           fromhn, tohn, hn = [candidate[:fromhn], 
                               candidate[:tohn], 
                               address.number].map {|s|s.to_i}
@@ -435,6 +454,7 @@ module Geocoder::US
     end
 
     def best_places (address, places, canonicalize=false)
+      return [] unless places.any?
       score_candidates! address, places
       best_candidates! places 
       canonicalize_places! places if canonicalize
@@ -463,56 +483,7 @@ module Geocoder::US
       best_places address, places, canonicalize
     end
 
-    # Given an Address object, return a list of possible geocodes by address
-    # range interpolation. If canonicalize is true, attempt to return the
-    # "primary" street and place names, if they are different from the ones
-    # given.
-    def geocode_address (address, canonicalize=false)
-      start_time = Time.now if @debug
-      places = []
-      candidates = []
-
-      # FIXME: this is the point at which we should be setting address.city=
-      # FIXME: start looking for intersections here?
-      # FIXME: include prenum in lookup if available
-      if address.zip.any?
-        candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
-        places = places_by_zip address.text, address.zip if candidates.any?
-      end
-
-      if candidates.empty?
-        places = places_by_city address.text, address.city_parts, address.state
-        cities = unique_values places, :city
-        cities.each {|city| address.city = city}
-        zips = unique_values places, :zip
-        candidates = candidate_records address.number, address.text, address.street_parts, zips
-      end
-
-      if candidates.empty?
-        # no exact range match?
-        candidates = candidate_records nil, address.text, address.street_parts, zips
-      end
-     
-      # -- this takes too long for certain streets...
-      if candidates.empty?
-        candidates = more_candidate_records address.number, address.text, address.street_parts, zips
-      end
-
-      # FIXME: we already geocoded the place. score and return it.
-      return best_places(address, places, canonicalize) if candidates.empty?
-
-      # need to join up places and candidates here, for scoring
-      merge_rows! candidates, places, :zip
-
-      # FIXME: this is the point we should be looking for intersections.
-      assign_number! address.number.to_i, candidates
-  
-      score_candidates! address, candidates
-
-      # FIXME: if no number is assigned in the query, only return one
-      # result for each street/zip combo
-      best_candidates! candidates 
-
+    def merge_edges! (candidates, canonicalize=false)
       edge_ids = unique_values candidates, :tlid
       if canonicalize
         records  = primary_records edge_ids
@@ -520,7 +491,99 @@ module Geocoder::US
       else
         records  = edges edge_ids
         merge_rows! candidates, records, :tlid
-      end        
+      end
+      edge_ids
+    end
+
+    def intersecting_angle (a, b, c, d)
+      if a == c
+        x, y = a
+        leg_c = distance(b,d)
+      elsif a == d
+        x, y = a
+        leg_c = distance(b,c)
+      elsif b == c
+        x, y = b
+        leg_c = distance(a,d)
+      elsif b == d
+        x, y = b
+        leg_c = distance(a,c)
+      else
+        return nil,nil,nil
+      end
+      leg_a = distance(a,b)
+      leg_b = distance(c,d)
+      # Law of Cosines
+      if leg_a > 0 and leg_b > 0
+        cos_angle = (leg_a ** 2 + leg_b ** 2 - leg_c ** 2)/(2 * leg_a * leg_b)
+        [x, y, Math.acos(cos_angle)]
+      else
+        [x, y, 0.0]
+      end
+    end
+
+    def find_intersections (candidates)
+      intersects = []
+      (0...candidates.length).each {|i|
+        record1 = candidates[i]
+        a, b = record1[:geometry][0], record1[:geometry][-1]
+        (i+1...candidates.length).each {|j|
+          record2 = candidates[j]
+          next if record1[:tlid] == record2[:tlid]
+          c, d = record2[:geometry][0], record2[:geometry][-1]
+          x, y, angle = intersecting_angle a, b, c, d
+          next unless angle
+          record = record1.clone
+          record[:street1] = record.delete(:street)
+          record[:street2] = record2[:street]
+          record[:street_score] = (
+            record1[:street_score].to_f+record2[:street_score].to_f)/2
+          record[:lon] = x
+          record[:lat] = y
+          record[:intersect_score] = (Math::PI-2*angle).abs/Math::PI
+          intersects << record
+        }
+      }
+      intersects
+    end
+
+    def geocode_intersection (address, canonicalize=false)
+      candidates = find_candidates address
+      merge_edges! candidates, canonicalize
+      candidates.each {|record|record[:geometry] = unpack_geometry record[:geometry]}
+      candidates = find_intersections candidates
+      score_candidates! address, candidates
+      best_candidates! candidates 
+
+      by_point = rows_to_h(candidates, :lon, :lat)
+      candidates = by_point.values.map {|records| records[0]}
+
+      canonicalize_places! candidates if canonicalize
+      candidates.each {|record| clean_record! record}
+      candidates
+    end
+
+    # Given an Address object, return a list of possible geocodes by address
+    # range interpolation. If canonicalize is true, attempt to return the
+    # "primary" street and place names, if they are different from the ones
+    # given.
+    def geocode_address (address, canonicalize=false)
+      candidates = find_candidates address
+
+      # FIXME: this is the point we should be looking for intersections.
+      assign_number! address.number.to_i, candidates
+
+      score_candidates! address, candidates
+      best_candidates! candidates 
+
+      # if no number is assigned in the query, only return one
+      # result for each street/zip combo
+      if address.number.none?
+        by_street = rows_to_h candidates, :street, :zip
+        candidates = by_street.values.map {|records| records[0]}
+      end
+
+      edge_ids = merge_edges! candidates, canonicalize
 
       ranges  = rows_to_h all_ranges(edge_ids), :tlid
       candidates.map {|record|
@@ -533,11 +596,6 @@ module Geocoder::US
       canonicalize_places! candidates if canonicalize
 
       candidates.each {|record| clean_record! record}
-
-      if @debug
-        runtime = format("%.3f", Time.now - start_time)
-        print "DONE: #{runtime}s\n"
-      end
       candidates
     end
 
@@ -558,17 +616,25 @@ module Geocoder::US
     #   the approximate "goodness" of the candidate match.
     # * The other values in the hash will represent various structured
     #   components of the address and place name.
-    def geocode (string, canonicalize=true)
+    def geocode (string, canonicalize=false)
       address = Address.new string
       results = []
+      start_time = Time.now if @debug
       # next try to look up each as addresses fo shiz
-      if address.street.any?
+      if address.intersection? and address.street.any?
+        results = geocode_intersection address, canonicalize
+      end
+      if results.empty? and address.street.any?
         results = geocode_address address, canonicalize
       end
       if results.empty?
         results = geocode_place address, canonicalize
       end
-      return results
+      if @debug
+        runtime = format("%.3f", Time.now - start_time)
+        print "DONE: #{runtime}s\n"
+      end
+      results
     end
   end
 end

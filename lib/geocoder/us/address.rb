@@ -139,7 +139,8 @@ module Geocoder::US
       }
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
-      strings.delete_if {|s| Std_Abbr[s] == s}
+      good_strings = strings.reject {|s| Std_Abbr.key? s or Name_Abbr.key? s}
+      strings = (good_strings.any? ? good_strings : [@number] + strings)
       # Start with the substrings that contain the most tokens, and
       # then proceed in order of "most abbreviated"
       strings.sort {|a,b|
@@ -158,8 +159,8 @@ module Geocoder::US
       }
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
-      strings.delete_if {|s| Std_Abbr[s] == s}
-      strings
+      good_strings = strings.reject {|s| Std_Abbr[s] == s}
+      good_strings.any? ? good_strings : strings
     end
 
     def city= (string)
@@ -167,6 +168,7 @@ module Geocoder::US
       match = Regexp.new('(.*)\s*' + string + '\s*', Regexp::IGNORECASE)
       # FIXME: This should only delete the *last* occurrence.
       # invented edge case: 300 Detroit St, Detroit MI
+      # actual edge case: Newport St, Wilmington DE gets obliterated by Newport, DE
       @street = @street.map {|string| string.gsub(match, '\1')}.select {|s|s.any?}
     end
 
