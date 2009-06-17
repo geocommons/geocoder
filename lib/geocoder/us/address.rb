@@ -3,11 +3,10 @@ require 'geocoder/us/constants'
 module Geocoder::US
   # Defines the matching of parsed address tokens.
   Match = {
-    :number   => /(\d+\W|[a-z]+)?(\d+)([a-z]?)/io,
-    :abbr     => Std_Abbr,
+    :number   => /^(\d+\W|[a-z]+)?(\d+)([a-z]?)\b/io,
     :street   => /(?:(?:\d+\w*|[a-z'-]+)\s*)+/io,
     :city     => /(?:[a-z'-]+\s*)+/io,
-    :state    => Regexp.new(State.match.source + "\s*$"),
+    :state    => Regexp.new(State.regexp.source + "\s*$"),
     :zip      => /(\d{5})(?:-\d{4})?\s*$/o,
     :at       => /\s(at|@|and|&)\s/io,
   }
@@ -38,32 +37,43 @@ module Geocoder::US
     # Expands a token into a list of possible strings based on
     # the Geocoder::US::Name_Abbr constant, and expands numerals and
     # number words into their possible equivalents.
-    def expand_token (token)
-      token_list = [token]
-      if /^\d+(?:st|nd|rd|th)?$/o.match token
-        num = token.to_i
-      elsif Ordinals[token]
-        num = Ordinals[token]
-      elsif Cardinals[token]
-        num = Cardinals[token]
+    def expand_numbers (string)
+      if /\b\d+(?:st|nd|rd|th)?\b/o.match string
+        match = $&
+        num = $&.to_i
+      elsif Ordinals.regexp.match string
+        num = Ordinals[$&]
+        match = $&
+      elsif Cardinals.regexp.match string
+        num = Cardinals[$&]
+        match = $&
       end
-      token_list = [num.to_s, Ordinals[num], Cardinals[num]] if num and num < 100
+      strings = [string]
+      if num and num < 100
+        [num.to_s, Ordinals[num], Cardinals[num]].each {|replace|
+          strings << string.sub(match, replace)
+        }
+      end
+      strings
     end
 
     def parse
       text = @text.clone
+
       @zip = text.scan(Match[:zip])[-1]
       if @zip
         text[$&] = ""
         @zip, @plus4 = @zip.map {|s|s.strip}
       end
       text.sub! /\s*,?\s*$/o, ""
+
       @state = text.scan(Match[:state])[-1]
       if @state
         text[$&] = ""
         @state = State[@state[0].strip]
       end
       text.sub! /\s*,?\s*$/o, ""
+
       @number = text.scan(Match[:number])[0]
       if @number
         text[$&] = ""
@@ -71,17 +81,27 @@ module Geocoder::US
       end
       text.sub! /^\s*,?\s*/o, ""
 
-      @street = text.scan(Match[:street]).map {|s|s.strip}
-      add = @street.map {|item| item.gsub(Name_Abbr.match) {|m| Name_Abbr[m]}}
-      @street |= add
-      add = @street.map {|item| item.gsub(Std_Abbr.match) {|m| Std_Abbr[m]}}
-      @street |= add
-      # unfortunate artifact due to \b and S matching "south"
-      @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
-      @street.sort! {|a,b| a.length <=> b.length}
+      # FIXME: special case: detect when @street contains
+      # only abbrs, and when it does, stick the number back
+      # on the front
 
+      # FIXME: special case: Name_Abbr gets a bit aggressive
+      # about replacing St with Saint. exceptional case:
+      # Sault Ste. Marie
+
+      @street = text.scan(Match[:street]).map {|s|s.strip}
+      @street.map! {|item| expand_numbers(item)}
+      @street.flatten!
+      add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
+      @street |= add
+      add = @street.map {|item| item.gsub(Std_Abbr.regexp) {|m| Std_Abbr[m]}}
+      @street |= add
+      # unfortunate artifact due to \b and S regexping "south"
+      # and a lack of regexp lookbehind in Ruby
+      @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
+      
       @city = text.scan(Match[:city])[-1].map {|s|s.strip}
-      add = @city.map {|item| item.gsub(Name_Abbr.match) {|m| Name_Abbr[m]}} 
+      add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
       @city |= add
       @city.reverse!
 
@@ -116,14 +136,6 @@ module Geocoder::US
       @city = [string.clone]
       match = Regexp.new('\s*' + string + '\s*')
       @street = @street.map {|string| string.gsub(match, "")}.select {|s|s.any?}
-    end
-
-    def intersection?
-      @tagged.any? {|tag| tag.any? {|t| t == :at}}
-    end
-
-    def intersection!
-      @tagged.map! {|tag| tag - [:number]}
     end
   end
 end

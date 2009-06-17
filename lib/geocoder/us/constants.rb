@@ -9,7 +9,7 @@ module Geocoder::US
     # The Map class provides a two-way mapping between postal abbreviations
     # and their fully written equivalents.
     #attr_accessor :partial
-    attr_accessor :match
+    attr_accessor :regexp
     def self.[] (*items)
       hash = super(*items)
       #hash.build_partial
@@ -28,7 +28,7 @@ module Geocoder::US
       }
     end
     def build_match
-      @match = Regexp.new(
+      @regexp = Regexp.new(
         '\b(' + [keys,values].flatten.join("|") + ')\b',
         Regexp::IGNORECASE)
     end
