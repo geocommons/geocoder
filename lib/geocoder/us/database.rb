@@ -11,6 +11,8 @@ module Geocoder
 end
 
 module Geocoder::US
+  Address_Weight = 5
+
   # Provides an interface to a Geocoder::US database.
   class Database
     # Takes the path of an SQLite 3 database prepared for Geocoder::US
@@ -91,39 +93,40 @@ module Geocoder::US
       rows
     end
 
-    def places_by_zip (zip)
-      execute("SELECT * FROM place WHERE zip = ?", zip)
+    def places_by_zip (city, zip)
+      execute("SELECT *, levenshtein(?, city) AS city_score
+               FROM place WHERE zip = ?", city, zip)
     end
 
     # Query the place table for by city, optional state, and zip.
     # The metaphone index on the place table is used to match
     # city names.
-    def places_by_city_or_zip (cities, state, zip)
+    def places_by_city (city, tokens, state)
       if state.nil? or state.empty?
         and_state = ""
-        args = [zip] + cities
+        args = [city] + tokens.clone
       else
         and_state = "AND state = ?"
-        args = [zip] + cities + [state]
+        args = [city] + tokens.clone + [state]
       end
-      metaphones = metaphone_placeholders_for cities
-      execute("SELECT * FROM place WHERE zip = ? or (
-                city_phone IN (#{metaphones}) #{and_state})", *args)
+      metaphones = metaphone_placeholders_for tokens
+      execute("SELECT *, levenshtein(?, city) AS city_score
+                FROM place WHERE city_phone IN (#{metaphones}) #{and_state}", *args)
     end
 
     # Generate an SQL query and set of parameters against the feature and range
     # tables for a street name and optional building number. The SQL is
     # used by candidate_records and more_candidate_records to filter results
     # by ZIP code.
-    def candidate_records_query (streets, number=nil)
-      metaphones = (["metaphone(?,5)"] * streets.length).join(",")
+    def candidate_records_query (street, tokens, number=nil)
+      metaphones = (["metaphone(?,5)"] * tokens.length).join(",")
       sql = "
-        SELECT feature.*, range.*
+        SELECT feature.*, range.*, levenshtein(?, street) AS street_score
           FROM feature, range
           WHERE street_phone IN (#{metaphones})
           AND range.tlid = feature.tlid
           AND range.zip = feature.zip"
-      params = streets.clone
+      params = [street] + tokens.clone
       unless number.nil?
         sql += "
           AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
@@ -137,8 +140,8 @@ module Geocoder::US
     # building number, street name, and list of candidate ZIP codes.
     # The metaphone and ZIP code indexes on the feature table are
     # used to match results.
-    def candidate_records (number, street, zips)
-      sql, params = candidate_records_query(street, number)
+    def candidate_records (number, street, tokens, zips)
+      sql, params = candidate_records_query(street, tokens, number)
       in_list = placeholders_for zips
       sql    += " AND feature.zip IN (#{in_list})"
       params += zips
@@ -149,8 +152,8 @@ module Geocoder::US
     # building number, street name, and list of candidate ZIP codes.
     # The ZIP codes are reduced to a set of 3-digit prefixes, broadening
     # the search area.
-    def more_candidate_records (number, street, zips)
-      sql, params = candidate_records_query(street, number)
+    def more_candidate_records (number, street, tokens, zips)
+      sql, params = candidate_records_query(street, tokens, number)
       if zips.any?
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
@@ -281,15 +284,18 @@ module Geocoder::US
     #   perfect match.
     def score_candidates! (address, candidates)
       for candidate in candidates
-        compare = [:street, :city, :state, :zip]
-        denominator = compare.length
-        score = denominator
+        compare = [:city, :state, :zip]
+        denominator = compare.length + Address_Weight
 
         # FIXME: prenum
-        text = "#{candidate[:street]}, #{candidate[:city]}, " + \
-               "#{candidate[:state]} #{candidate[:zip]}"
-        score *= 1.0 - edit_distance(address.text, text)
-
+        # text = "#{candidate[:street]}, #{candidate[:city]}, " + \
+        #        "#{candidate[:state]} #{candidate[:zip]}"
+        # score *= 1.0 - edit_distance(address.text, text)
+        score = (1.0 - candidate[:street_score].to_f) * Address_Weight
+        score += 1.0 - candidate[:city_score].to_f
+        score += 1 if address.state == candidate[:state]
+        score += 1 if address.zip == candidate[:zip]
+        
         # FIXME: I get the feeling that this doesn't belong here anymore
         unless address.number.nil? or address.number.empty?
           fromhn, tohn, hn = [candidate[:fromhn], 
@@ -428,24 +434,9 @@ module Geocoder::US
            :priority, :fips_class, :fips_place, :status].include? k}
     end
 
-    # Given an Address object, return a list of possible geocodes by place
-    # name. If canonicalize is true, attempt to return the "primary" postal
-    # place name for the given city, state, or ZIP.
-    def geocode_place (query, canonicalize=false)
-      # lookup.rst (1)
-      places = []
-
-      # lookup.rst (2) and (3) together -- index does fine
-      places = places_by_city_or_zip query[:city], query[:state], query[:zip]
-      return [] if places.empty?
-
-      # lookup.rst (7)
-      score_candidates! query, places
-
-      # lookup.rst (8)
+    def best_places (address, places, canonicalize=false)
+      score_candidates! address, places
       best_candidates! places 
-
-      # lookup.rst (11)
       canonicalize_places! places if canonicalize
 
       # uniqify places
@@ -453,12 +444,23 @@ module Geocoder::US
       by_name.values.each {|v| v.sort! {|a,b| a[:zip] <=> b[:zip]}}
       places = by_name.map {|k,v| v[0]}
    
-      # lookup.rst (12)
       places.each {|record| clean_record! record}
       places.each {|record|
-        record[:precision] = (record[:zip] == query[:zip] ? :zip : :city)
+        record[:precision] = (record[:zip] == address.zip ? :zip : :city)
       }
       places
+    end
+
+    # Given an Address object, return a list of possible geocodes by place
+    # name. If canonicalize is true, attempt to return the "primary" postal
+    # place name for the given city, state, or ZIP.
+    def geocode_place (address, canonicalize=false)
+      if address.zip.any?
+        places = places_by_zip address.text, address.zip
+      else
+        places = places_by_city address.text, address.city_parts, address.state
+      end
+      best_places address, places, canonicalize
     end
 
     # Given an Address object, return a list of possible geocodes by address
@@ -468,33 +470,36 @@ module Geocoder::US
     def geocode_address (address, canonicalize=false)
       start_time = Time.now if @debug
       places = []
+      candidates = []
 
       # FIXME: this is the point at which we should be setting address.city=
       # FIXME: start looking for intersections here?
       # FIXME: include prenum in lookup if available
       if address.zip.any?
-        candidates = candidate_records address.number, address.street, [address.zip]
-        places = places_by_zip address.zip if candidates.any?
+        candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
+        places = places_by_zip address.text, address.zip if candidates.any?
       end
 
       if candidates.empty?
-        places = places_by_city_or_zip address.city, address.state, address.zip
+        places = places_by_city address.text, address.city_parts, address.state
+        cities = unique_values places, :city
+        cities.each {|city| address.city = city}
         zips = unique_values places, :zip
-        candidates = candidate_records address.number, address.street, zips
+        candidates = candidate_records address.number, address.text, address.street_parts, zips
       end
 
       if candidates.empty?
         # no exact range match?
-        candidates = candidate_records nil, address.street, zips
+        candidates = candidate_records nil, address.text, address.street_parts, zips
       end
      
       # -- this takes too long for certain streets...
       if candidates.empty?
-        candidates = more_candidate_records address.number, address.street, zips
+        candidates = more_candidate_records address.number, address.text, address.street_parts, zips
       end
 
       # FIXME: we already geocoded the place. score and return it.
-      return [] if candidates.empty?
+      return best_places(address, places, canonicalize) if candidates.empty?
 
       # need to join up places and candidates here, for scoring
       merge_rows! candidates, places, :zip
@@ -553,29 +558,17 @@ module Geocoder::US
     #   the approximate "goodness" of the candidate match.
     # * The other values in the hash will represent various structured
     #   components of the address and place name.
-    def geocode (string, max_penalty=0, cutoff=25, canonicalize=true)
-      addr = Address.new string
-      # first try to geocode as a bare place. this should fail
-      # quickly in cases where the address is really an address.
-      parse_list = addr.parse_as_place(max_penalty, 5)
-      for query in parse_list
-        next unless query[:zip].any? or query[:city].any?
-        results = geocode_place( query, canonicalize )
-        return results if results.any?
-      end
-
+    def geocode (string, canonicalize=true)
+      address = Address.new string
+      results = []
       # next try to look up each as addresses fo shiz
-      parse_list = addr.parse(max_penalty, cutoff)
-      for query in parse_list
-        next unless query[:number].any? \
-                and query[:street].any? \
-                and (query[:zip].any? or query[:city].any?)
-        results = geocode_address query, canonicalize
-        return results if results.any?
+      if address.street.any?
+        results = geocode_address address, canonicalize
       end
-
-      # no such luck
-      return []
+      if results.empty?
+        results = geocode_place address, canonicalize
+      end
+      return results
     end
   end
 end
