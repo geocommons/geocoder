@@ -240,20 +240,20 @@ module Geocoder::US
       if address.zip.any?
         places = places_by_zip address.text, address.zip
         if places.any?
-          cities = unique_values places, :city
-          #cities.each {|city| address.city = city}
+          address.city = unique_values places, :city
           candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
         end
       end
 
       if candidates.empty?
         places = places_by_city address.text, address.city_parts, address.state
-        cities = unique_values places, :city
-        #cities.each {|city| address.city = city}
+        # FIXME: what happens if we get to here and no places match?
+        address.city = unique_values places, :city
         zips = unique_values places, :zip
         candidates = candidate_records address.number, address.text, address.street_parts, zips
       end
 
+      # FIXME: what happens if we get to here and no places match?
       if candidates.empty?
         # no exact range match?
         candidates = candidate_records nil, address.text, address.street_parts, zips
@@ -628,9 +628,10 @@ module Geocoder::US
     #   components of the address and place name.
     def geocode (string, canonicalize=false)
       address = Address.new string
+      print "ADDR: #{address.inspect}\n" if @debug
+      return [] if address.city.none? and address.zip.none?
       results = []
       start_time = Time.now if @debug
-      # next try to look up each as addresses fo shiz
       if address.intersection? and address.street.any?
         results = geocode_intersection address, canonicalize
       end
