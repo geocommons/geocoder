@@ -172,7 +172,7 @@ module Geocoder::US
     def city= (strings)
       # NOTE: This will still fail on: 100 Broome St, 33333 (if 33333 is
       # Broome, MT or what)
-      match = Regexp.new('\s*(?:' + strings.join("|") + ')\s*$', Regexp::IGNORECASE)
+      match = Regexp.new('\s*\b(?:' + strings.join("|") + ')\b\s*$', Regexp::IGNORECASE)
       @street = @street.map {|string| string.gsub(match, '')}.select {|s|s.any?}
     end
 

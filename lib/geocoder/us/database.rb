@@ -241,6 +241,7 @@ module Geocoder::US
         places = places_by_zip address.text, address.zip
         if places.any?
           address.city = unique_values places, :city
+          return places if address.street.none?
           candidates = candidate_records address.number, address.text, address.street_parts, [address.zip]
         end
       end
@@ -252,13 +253,13 @@ module Geocoder::US
         else
           places += addl_places
         end
-        # FIXME: what happens if we get to here and no places match?
+        return [] if places.empty?
         address.city = unique_values places, :city
+        return places if address.street.none?
         zips = unique_values places, :zip
         candidates = candidate_records address.number, address.text, address.street_parts, zips
       end
 
-      # FIXME: what happens if we get to here and no places match?
       if candidates.empty?
         # no exact range match?
         candidates = candidate_records nil, address.text, address.street_parts, zips
@@ -565,6 +566,9 @@ module Geocoder::US
 
     def geocode_intersection (address, canonicalize=false)
       candidates = find_candidates address
+      return [] if candidates.none?
+      return best_places address, candidates, canonicalize if candidates[0][:street].nil?
+
       merge_edges! candidates, canonicalize
       candidates.each {|record|record[:geometry] = unpack_geometry record[:geometry]}
       candidates = find_intersections candidates
@@ -585,6 +589,8 @@ module Geocoder::US
     # given.
     def geocode_address (address, canonicalize=false)
       candidates = find_candidates address
+      return [] if candidates.none?
+      return best_places address, candidates, canonicalize if candidates[0][:street].nil?
 
       # FIXME: this is the point we should be looking for intersections.
       assign_number! address.number.to_i, candidates
