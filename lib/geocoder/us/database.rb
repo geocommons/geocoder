@@ -638,7 +638,7 @@ module Geocoder::US
       return [] if address.city.none? and address.zip.none?
       results = []
       start_time = Time.now if @debug
-      if address.intersection? and address.street.any?
+      if address.intersection? and address.street.any? and address.number.none?
         results = geocode_intersection address, canonicalize
       end
       if results.empty? and address.street.any?
