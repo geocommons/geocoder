@@ -84,7 +84,8 @@ module Geocoder::US
       end
 
       @number = text.scan(Match[:number])[0]
-      if @number and not intersection?
+      # FIXME: 230 Fish And Game Rd, Hudson NY 12534
+      if @number # and not intersection?
         # FIXME: What if this string appears twice?
         text[$&] = ""
         text.sub! /^\s*,?\s*/o, ""
