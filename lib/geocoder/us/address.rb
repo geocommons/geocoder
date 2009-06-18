@@ -5,9 +5,9 @@ module Geocoder::US
   Match = {
     # FIXME: shouldn't have to anchor :number and :zip at start/end
     :number   => /^(\d+\W|[a-z]+)?(\d+)([a-z]?)\b/io,
-    :street   => /(?:(?:\d+\w*|[a-z'-]+)\s*)+/io,
-    :city     => /(?:[a-z'-]+\s*)+/io,
-    :state    => Regexp.new(State.regexp.source + "\s*$"),
+    :street   => /(?:\b(?:\d+\w*|[a-z'-]+)\s*)+/io,
+    :city     => /(?:\b[a-z'-]+\s*)+/io,
+    :state    => Regexp.new(State.regexp.source + "\s*$", Regexp::IGNORECASE),
     :zip      => /(\d{5})(?:-\d{4})?\s*$/o,
     :at       => /\s(at|@|and|&)\s/io,
   }
@@ -104,8 +104,6 @@ module Geocoder::US
       @street = text.scan(Match[:street])
       if @street
         @street.map! {|s|s.strip}
-        @street.map! {|item| expand_numbers(item)}
-        @street.flatten!
         add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
         @street |= add
         add = @street.map {|item| item.gsub(Std_Abbr.regexp) {|m| Std_Abbr[m]}}
@@ -113,6 +111,8 @@ module Geocoder::US
         # unfortunate artifact due to \b and S regexping "south"
         # and a lack of regexp lookbehind in Ruby
         @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
+        @street.map! {|item| expand_numbers(item)}
+        @street.flatten!
       else
         @street = []
       end
@@ -126,7 +126,7 @@ module Geocoder::US
         @city = []
       end
 
-      self.city= @city[0] if @city.length == 1
+      self.city= @city if @city != @street
     end
 
     def street_parts
@@ -163,13 +163,11 @@ module Geocoder::US
       good_strings.any? ? good_strings : strings
     end
 
-    def city= (string)
-      @city = [string.clone]
-      match = Regexp.new('(.*)\s*' + string + '\s*', Regexp::IGNORECASE)
-      # FIXME: This should only delete the *last* occurrence.
-      # invented edge case: 300 Detroit St, Detroit MI
-      # actual edge case: Newport St, Wilmington DE gets obliterated by Newport, DE
-      @street = @street.map {|string| string.gsub(match, '\1')}.select {|s|s.any?}
+    def city= (strings)
+      # NOTE: This will still fail on: 100 Broome St, 33333 (if 33333 is
+      # Broome, MT or what)
+      match = Regexp.new('\s*(?:' + strings.join("|") + ')\s*$', Regexp::IGNORECASE)
+      @street = @street.map {|string| string.gsub(match, '')}.select {|s|s.any?}
     end
 
     def intersection?
