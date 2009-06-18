@@ -61,7 +61,7 @@ module Geocoder::US
     end
 
     def parse
-      text = @text.clone
+      text = @text.clone.downcase
 
       @zip = text.scan(Match[:zip])[-1]
       if @zip
@@ -102,7 +102,7 @@ module Geocoder::US
       # Sault Ste. Marie
 
       @street = text.scan(Match[:street])
-      if @street
+      if @street.any?
         @street.map! {|s|s.strip}
         add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
         @street |= add
@@ -118,15 +118,16 @@ module Geocoder::US
       end
         
       @city = text.scan(Match[:city])
-      if @city
-        @city.map! {|s|s.strip}
+      if @city.any?
+        @city = [@city[-1].strip]
+        #@city.map! {|s|s.strip}
         add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
         @city |= add
       else
         @city = []
       end
 
-      self.city= @city if @city != @street
+      self.city= @city if @city.length == 1 and @city != @street
     end
 
     def street_parts
@@ -139,8 +140,10 @@ module Geocoder::US
       }
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
-      good_strings = strings.reject {|s| Std_Abbr.key? s or Name_Abbr.key? s}
-      strings = (good_strings.any? ? good_strings : [@number] + strings)
+      # Answer: Yes, it breaks on simple things like "Prairie St"
+      # Try a simpler case of adding the @number in case everything is an abbr.
+      strings += [@number] if strings.all? {|s| Std_Abbr.key? s or Name_Abbr.key? s}
+
       # Start with the substrings that contain the most tokens, and
       # then proceed in order of "most abbreviated"
       strings.sort {|a,b|
@@ -159,8 +162,10 @@ module Geocoder::US
       }
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
-      good_strings = strings.reject {|s| Std_Abbr[s] == s}
-      good_strings.any? ? good_strings : strings
+      # Answer: Yes, it breaks on "Prairie"
+      #good_strings = strings.reject {|s| Std_Abbr[s] == s}
+      #good_strings.any? ? good_strings : strings
+      strings
     end
 
     def city= (strings)
