@@ -555,6 +555,7 @@ module Geocoder::US
             record[:lon] = x
             record[:lat] = y
             record[:intersect_score] = (Math::PI-2*angle).abs/Math::PI
+            record[:precision] = :intersection
             intersects << record
           }
         }
