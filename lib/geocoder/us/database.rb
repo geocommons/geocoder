@@ -246,7 +246,12 @@ module Geocoder::US
       end
 
       if candidates.empty?
-        places = places_by_city address.text, address.city_parts, address.state
+        addl_places = places_by_city address.text, address.city_parts, address.state
+        if places.empty?
+          places = addl_places
+        else
+          places += addl_places
+        end
         # FIXME: what happens if we get to here and no places match?
         address.city = unique_values places, :city
         zips = unique_values places, :zip
