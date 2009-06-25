@@ -142,16 +142,12 @@ module Geocoder::US
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on simple things like "Prairie St"
+      good_strings = strings.reject {|s| Std_Abbr.key? s}
+      strings = good_strings if good_strings.any?
+
       # Try a simpler case of adding the @number in case everything is an abbr.
       strings += [@number] if strings.all? {|s| Std_Abbr.key? s or Name_Abbr.key? s}
-
-      # Start with the substrings that contain the most tokens, and
-      # then proceed in order of "most abbreviated"
-      strings.sort {|a,b|
-        cmp = b.count(" ") <=> a.count(" ")
-        cmp = a.length <=> b.length if cmp == 0
-        cmp
-      }
+      strings.map {|s| s.downcase}.to_set.to_a 
     end
   
     def city_parts
