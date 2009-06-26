@@ -33,7 +33,7 @@ module Geocoder::US
     # Removes any characters that aren't strictly part of an address string.
     def clean (value)
       value.strip \
-           .gsub(/[^a-z0-9 ,'&@-]+/io, "") \
+           .gsub(/[^a-z0-9 ,'&@\/-]+/io, "") \
            .gsub(/\s+/o, " ")
     end
 
@@ -51,11 +51,13 @@ module Geocoder::US
         num = Cardinals[$&]
         match = $&
       end
-      strings = [string]
+      strings = []
       if num and num < 100
         [num.to_s, Ordinals[num], Cardinals[num]].each {|replace|
           strings << string.sub(match, replace)
         }
+      else
+        strings << string
       end
       strings
     end
@@ -78,8 +80,10 @@ module Geocoder::US
         # FIXME: What if this string appears twice?
         text[$&] = ""
         text.sub! /\s*,?\s*$/o, ""
-        @state = State[@state[0].strip]
+        full_state = @state[0].strip # special case: New York
+        @state = State[full_state]
       else
+        full_state = ""
         @state = ""
       end
 
@@ -117,7 +121,10 @@ module Geocoder::US
       else
         @street = []
       end
-        
+      
+      # SPECIAL CASE: 1600 Pennsylvania 20050
+      @street << full_state if @street.empty? and @state.downcase != full_state.downcase      
+ 
       @city = text.scan(Match[:city])
       if @city.any?
         @city = [@city[-1].strip]
@@ -128,6 +135,11 @@ module Geocoder::US
         @city = []
       end
 
+      # SPECIAL CASE: no city, but a state with the same name. e.g. "New York"
+      @city << full_state if @state.downcase != full_state.downcase
+
+      # SPECIAL CASE: if given a single city string, and it's not the
+      # same as the street string, remove it from the street parts
       self.city= @city if @city.length == 1 and @city != @street
     end
 
