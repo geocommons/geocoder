@@ -51,7 +51,7 @@ INSERT INTO feature_edge
         WHERE l.tlid=f.tlid AND l.zip=b.zip
           AND f.fullname=b.street AND f.paflag=b.paflag;
 
-SELECT min(fid),max(fid) FROM feature_bin;
+-- SELECT min(fid),max(fid) FROM feature_bin;
 
 INSERT INTO feature
     SELECT * FROM feature_bin;
