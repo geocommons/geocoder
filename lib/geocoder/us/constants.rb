@@ -8,10 +8,12 @@ module Geocoder::US
   class Map < Hash
     # The Map class provides a two-way mapping between postal abbreviations
     # and their fully written equivalents.
-    attr_accessor :partial
+    #attr_accessor :partial
+    attr_accessor :regexp
     def self.[] (*items)
       hash = super(*items)
-      hash.build_partial
+      #hash.build_partial
+      hash.build_match
       hash.keys.each {|k| hash[k.downcase] = hash.fetch(k)}
       hash.values.each {|v| hash[v.downcase] = v}
       hash.freeze
@@ -21,11 +23,14 @@ module Geocoder::US
     def build_partial
       @partial = Set.new()
       [keys, values].flatten.each {|item|
-        tokens = item.downcase.split
-        tokens.each_index {|i|
-          @partial << tokens[0..i].join(" ")
-        }
+        @partial << item.downcase
+        item.downcase.split.each {|token| @partial << token}
       }
+    end
+    def build_match
+      @regexp = Regexp.new(
+        '\b(' + [keys,values].flatten.join("|") + ')\b',
+        Regexp::IGNORECASE)
     end
     # The partial? method returns true if the key is a prefix of some
     # key in the Map.
@@ -466,6 +471,11 @@ module Geocoder::US
     "Trailer"	=> "Trlr",
     "Unit"	=> "Unit",
     "Upper"	=> "Uppr",
+  ]
+
+  Std_Abbr = Map[
+    [Directional, Prefix_Qualifier, Suffix_Qualifier,
+     Prefix_Type, Suffix_Type, Unit_Type].inject({}) {|x,y|x.merge y}
   ]
 
   # The Name_Abbr constant maps common toponym abbreviations to their
