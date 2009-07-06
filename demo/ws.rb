@@ -8,8 +8,8 @@ set :port, 8080
 
 get '/' do
   unless params[:address].nil?
-    db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db",
-              "/home/sderle/geocoder/lib/libsqlite3_geocoder.so")
+    db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
+	#, "/home/sderle/geocoder/lib/geocoder/us/sqlite3.so")
     @records = db.geocode params[:address]
   end
 
