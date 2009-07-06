@@ -30,7 +30,6 @@ module Geocoder::US
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
-      @memo = {}
       @debug = options[:debug]
       tune options[:helper], options[:cache_size]
     end
@@ -59,6 +58,10 @@ module Geocoder::US
       return @st[sql]
     end
 
+    def flush_statements
+      @st = {}
+    end
+
     # Generate enough SQL placeholders for a list of objects.
     def placeholders_for (list)
       (["?"] * list.length).join(",")
@@ -82,7 +85,7 @@ module Geocoder::US
     def execute_statement (st, *params)
       if @debug
         start = Time.now
-        $stderr.print "EXEC: #{params.inspect}\n"
+        $stderr.print "EXEC: #{params.inspect}\n" if params.any?
       end
       result = st.execute(*params)
       columns = result.columns.map {|c| c.to_sym}
@@ -90,7 +93,7 @@ module Geocoder::US
       result.each {|row| rows << Hash[*(columns.zip(row).flatten)]}
       if @debug
         runtime = format("%.3f", Time.now - start)
-        $stderr.print "ROWS: #{rows.length} (#{runtime}s)\n" if @debug
+        $stderr.print "ROWS: #{rows.length} (#{runtime}s)\n"
       end
       rows
     end
@@ -195,6 +198,35 @@ module Geocoder::US
               GROUP BY tlid, side;"
       params = edge_ids
       execute sql, *params
+    end
+
+    def intersections_by_fid (fids)
+      in_list = placeholders_for fids
+      sql = "
+        CREATE TEMPORARY TABLE intersection AS
+          SELECT fid, substr(geometry,1,8) AS point
+              FROM feature_edge, edge 
+              WHERE feature_edge.tlid = edge.tlid
+              AND fid IN (#{in_list})
+          UNION
+          SELECT fid, substr(geometry,length(geometry)-7,8) AS point
+              FROM feature_edge, edge 
+              WHERE feature_edge.tlid = edge.tlid
+              AND fid IN (#{in_list});
+        CREATE INDEX intersect_pt_idx ON intersection (point);"
+      execute sql, *(fids + fids)
+      # the a.fid < b.fid inequality guarantees ordering of street names
+      # in the output
+      results = execute "
+        SELECT a.fid AS fid1, b.fid AS fid2, a.point 
+            FROM intersection a, intersection b, feature f1, feature f2
+            WHERE a.point = b.point AND a.fid < b.fid
+            AND f1.fid = a.fid AND f2.fid = b.fid
+            AND f1.zip = f2.zip
+            AND f1.paflag = 'P' AND f2.paflag = 'P';"
+      execute "DROP TABLE intersection;"
+      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      results
     end
 
     # Query the place table for notional "primary" place names for each of a
@@ -327,10 +359,7 @@ module Geocoder::US
         score += (1.0 - candidate[:city_score].to_f) * City_Weight
         compare.each {|key| score += 1 if address.send(key) == candidate[key]}
 
-        if candidate[:intersect_score] 
-          score += 1.0 - candidate[:intersect_score]
-          denominator += 1
-        elsif address.number and address.number.any?
+        if address.number and address.number.any?
           fromhn, tohn, hn = [candidate[:fromhn], 
                               candidate[:tohn], 
                               address.number].map {|s|s.to_i}
@@ -343,7 +372,6 @@ module Geocoder::US
           end
           denominator += 2
         end
-
         candidate[:score] = score.to_f / denominator
       end
     end
@@ -452,7 +480,7 @@ module Geocoder::US
         unless record[:score].nil?
       record.keys.each {|k| record[k] = "" if record[k].nil? } # clean up nils
       record.delete_if {|k,v| k.is_a? Fixnum or
-          [:geometry, :side, :tlid, :street_phone,
+          [:geometry, :side, :tlid, :fid, :fid1, :fid2, :street_phone,
            :city_phone, :fromhn, :tohn, :paflag,
            :priority, :fips_class, :fips_place, :status].include? k}
     end
@@ -485,82 +513,29 @@ module Geocoder::US
       best_places address, places, canonicalize
     end
 
-    def intersecting_angle (a, b, c, d)
-      if a == c
-        x, y = a
-        leg_c = distance(b,d)
-      elsif a == d
-        x, y = a
-        leg_c = distance(b,c)
-      elsif b == c
-        x, y = b
-        leg_c = distance(a,d)
-      elsif b == d
-        x, y = b
-        leg_c = distance(a,c)
-      else
-        return nil,nil,nil
-      end
-      leg_a = distance(a,b)
-      leg_b = distance(c,d)
-      # Law of Cosines
-      if leg_a > 0 and leg_b > 0
-        cos_angle = (leg_a ** 2 + leg_b ** 2 - leg_c ** 2)/(2 * leg_a * leg_b)
-        [x, y, Math.acos(cos_angle)]
-      else
-        [x, y, 0.0]
-      end
-    end
-
-    def find_intersections (candidates)
-      points = {}
-      intersects = []
-      candidates.each {|record|
-        [record[:geometry][0], record[:geometry][-1]].each {|point|
-          points[point] ||= []
-          points[point] << record
-        }
-      }
-      points.values.each {|recordset|
-        recordset.each_index {|i|
-          record1 = recordset[i]
-          a, b = record1[:geometry][0], record1[:geometry][-1]
-          (i+1...recordset.length).each {|j|
-            record2 = candidates[j]
-            next if record1[:tlid] == record2[:tlid] \
-                 or record1[:street] == record2[:street]
-            c, d = record2[:geometry][0], record2[:geometry][-1]
-            x, y, angle = intersecting_angle a, b, c, d
-            next unless angle
-            record = record1.clone
-            record[:street1] = record.delete(:street)
-            record[:street2] = record2[:street]
-            record[:street_score] = (
-              record1[:street_score].to_f+record2[:street_score].to_f)/2
-            record[:lon] = x
-            record[:lat] = y
-            record[:intersect_score] = (Math::PI-2*angle).abs/Math::PI
-            record[:precision] = :intersection
-            intersects << record
-          }
-        }
-      }
-      intersects
-    end
-
-    def geocode_intersection (address, canonical_streets=false, canonical_place=false)
+    def geocode_intersection (address, canonical_place=false)
       candidates = find_candidates address
-      return [] if candidates.none?
+      return [] if candidates.empty?
       return best_places(address, candidates, canonical_place) if candidates[0][:street].nil?
 
-      merge_edges! candidates, canonical_streets
-      candidates.each {|record|record[:geometry] = unpack_geometry record[:geometry]}
-      candidates = find_intersections candidates
+      features = rows_to_h candidates, :fid
+      intersects = intersections_by_fid features.keys.flatten
+      intersects.map! {|record|
+        feat1, feat2 = record.values_at(:fid1, :fid2).map {|k| features[[k]][0]}
+        record.merge! feat1
+        record[:street1] = record.delete(:street)
+        record[:street2] = feat2[:street]
+        record[:lon], record[:lat] = unpack_geometry(record.delete(:point))[0]
+        record[:precision] = :intersection
+        record[:street_score] = (feat1[:street_score].to_f + feat2[:street_score].to_f)/2
+        record
+      }
+      #pp(intersects)
       
-      score_candidates! address, candidates
-      best_candidates! candidates 
+      score_candidates! address, intersects
+      best_candidates! intersects 
 
-      by_point = rows_to_h(candidates, :lon, :lat)
+      by_point = rows_to_h(intersects, :lon, :lat)
       candidates = by_point.values.map {|records| records[0]}
 
       canonicalize_places! candidates if canonical_place
@@ -579,11 +554,6 @@ module Geocoder::US
 
       add_ranges! address, candidates
       score_candidates! address, candidates
-      
-      #candidates.sort! {|a,b| b[:score] <=> a[:score]}
-      #print "RANGES:\n"
-      #candidates.each {|r| pp(r)}
-
       best_candidates! candidates 
 
       # if no number is assigned in the query, only return one
@@ -634,7 +604,7 @@ module Geocoder::US
       return [] if address.city.empty? and address.zip.none?
       results = []
       start_time = Time.now if @debug
-      if address.intersection? and address.street.any? and address.number.none?
+      if address.intersection? and address.street.any? and address.number.empty?
         results = geocode_intersection address, canonical_place
       end
       if results.empty? and address.street.any?
