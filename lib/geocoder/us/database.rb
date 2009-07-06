@@ -119,25 +119,13 @@ module Geocoder::US
     # tables for a street name and optional building number. The SQL is
     # used by candidate_records and more_candidate_records to filter results
     # by ZIP code.
-    def candidate_records_query (street, tokens, number=nil, prenum=nil)
+    def features_by_street (street, tokens)
       metaphones = (["metaphone(?,5)"] * tokens.length).join(",")
       sql = "
-        SELECT feature.*, range.*, levenshtein(?, street) AS street_score
+        SELECT feature.*, levenshtein(?, street) AS street_score
           FROM feature, range
-          WHERE street_phone IN (#{metaphones})
-          AND range.tlid = feature.tlid
-          AND range.zip = feature.zip
-          AND range.prenum = ?"
-      # FIXME: this is here because TIGER/Line has a pathological
-      # number of ranges for certain edges
-      prenum = "" if prenum.nil?
-      params = [street] + tokens.clone + [prenum]
-      if number and number.any?
-        sql += "
-          AND ((fromhn < tohn AND ? BETWEEN fromhn AND tohn)
-           OR  (fromhn > tohn AND ? BETWEEN tohn AND fromhn))" 
-        params += [number, number]
-      end
+          WHERE street_phone IN (#{metaphones})"
+      params = [street] + tokens
       return [sql, params]
     end
 
@@ -145,8 +133,8 @@ module Geocoder::US
     # building number, street name, and list of candidate ZIP codes.
     # The metaphone and ZIP code indexes on the feature table are
     # used to match results.
-    def candidate_records (prenum, number, street, tokens, zips)
-      sql, params = candidate_records_query(street, tokens, number, prenum)
+    def features_by_street_and_zip (street, tokens, zips)
+      sql, params = features_by_street(street, tokens)
       in_list = placeholders_for zips
       sql    += " AND feature.zip IN (#{in_list})"
       params += zips
@@ -157,8 +145,8 @@ module Geocoder::US
     # building number, street name, and list of candidate ZIP codes.
     # The ZIP codes are reduced to a set of 3-digit prefixes, broadening
     # the search area.
-    def more_candidate_records (number, street, tokens, zips)
-      sql, params = candidate_records_query(street, tokens, number)
+    def more_features_by_street_and_zip (street, tokens, zips)
+      sql, params = features_by_street(street, tokens, number)
       if zips.any?
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
@@ -169,6 +157,25 @@ module Geocoder::US
       execute_statement st, *params
     end
 
+    def ranges_by_feature (fids, prenum, number)
+      in_list = placeholders_for fids
+      limit = 4 * fids.length
+      sql = "
+        SELECT * FROM feature_edge, range
+          WHERE fid IN (#{in_list})
+          AND feature_edge.tlid = range.tlid"
+      params = fids.clone
+      unless prenum.nil?
+        sql += " AND prenum = ?"
+        params += [prenum]
+      end
+      sql += " 
+          ORDER BY min(abs(fromhn - ?), abs(tohn - ?))
+          LIMIT #{limit};"
+      params += [number, number]
+      execute sql, *params
+    end
+
     # Query the edge table for a list of edges matching a list of edge IDs.
     def edges (edge_ids)
       in_list = placeholders_for edge_ids
@@ -176,28 +183,16 @@ module Geocoder::US
       execute sql, *edge_ids
     end
 
-    # Query the feature table for the primary feature names for each of
-    # a list of edge IDs.
-    def primary_records (edge_ids)
-      in_list = placeholders_for edge_ids
-      sql = "SELECT feature.*, edge.*
-               FROM feature, edge
-               WHERE feature.tlid IN (#{in_list})
-               AND paflag = 'P'
-               AND edge.tlid = feature.tlid;"
-      execute sql, *edge_ids
-    end
-
     # Query the range table for all ranges associated with the given
     # list of edge IDs.
-    def all_ranges (prenum, edge_ids)
-      prenum = "" if prenum.nil?
+    def range_ends (edge_ids)
       in_list = placeholders_for edge_ids
-      sql = "SELECT * FROM range
-              WHERE range.tlid IN (#{in_list})
-              AND prenum = ?
-              ORDER BY fromhn ASC;"
-      params = edge_ids + [prenum]
+      sql = "SELECT tlid, side,
+                    min(min(fromhn), min(tohn)) AS fromhn,
+                    max(max(fromhn), max(tohn)) AS tohn,
+              FROM range WHERE tlid IN (#{in_list})
+              GROUP BY tlid, side;"
+      params = edge_ids
       execute sql, *params
     end
 
@@ -243,41 +238,20 @@ module Geocoder::US
       places = []
       candidates = []
 
-      # FIXME: include prenum in lookup if available
-      if address.zip.any?
-        places = places_by_zip address.text, address.zip
-        if places.any?
-          address.city = unique_values places, :city
-          return places if address.street.none?
-          candidates = candidate_records address.prenum, address.number, address.text, address.street_parts, [address.zip]
-        end
-      end
+      places = places_by_zip address.text, address.zip if address.zip.any?
+      places += places_by_city address.text, address.city_parts, address.state
+
+      return [] if places.empty?
+
+      address.city = unique_values places, :city
+      return places if address.street.none?
+      zips = unique_values places, :zip
+      candidates = features_by_street_and_zip address.text, address.street_parts, zips
 
       if candidates.empty?
-        addl_places = places_by_city address.text, address.city_parts, address.state
-        if places.empty?
-          places = addl_places
-        else
-          places += addl_places
-        end
-        return [] if places.empty?
-        address.city = unique_values places, :city
-        return places if address.street.none?
-        zips = unique_values places, :zip
-        candidates = candidate_records address.prenum, address.number, address.text, address.street_parts, zips
+        candidates = more_features_by_street_and_zip address.text, address.street_parts, zips
       end
 
-      if candidates.empty?
-        # no exact range match?
-        candidates = candidate_records nil, nil, address.text, address.street_parts, zips
-      end
-     
-      # -- this takes too long for certain streets...
-      if candidates.empty?
-        candidates = more_candidate_records address.number, address.text, address.street_parts, zips
-      end
-
-      # need to join up places and candidates here
       merge_rows! candidates, places, :zip
       candidates
     end
@@ -296,10 +270,38 @@ module Geocoder::US
           candidate[:precision] = :range
         else
           candidate[:number] = ((hn - fromhn).abs < (hn - tohn).abs ?
-                                candidate[:fromhn] : candidate[:tohn])
+                                candidate[:fromhn] : candidate[:tohn]).to_s
           candidate[:precision] = :street
         end
       end
+    end
+
+    def add_ranges! (address, candidates)
+      number = address.number
+      number = 0 if number.nil? or number.none?
+      fids   = unique_values candidates, :fid
+      ranges = ranges_by_feature fids, number, address.prenum
+      ranges = ranges_by_feature fids, number, nil unless ranges.any?
+      merge_rows! candidates, ranges, :fid
+      assign_number! number, candidates
+    end
+
+    def merge_edges! (candidates, canonicalize=false)
+      edge_ids = unique_values candidates, :tlid
+      if canonicalize
+        records  = primary_records edge_ids
+        merge_rows! candidates, records, :tlid, :zip
+      else
+        records  = edges edge_ids
+        merge_rows! candidates, records, :tlid
+      end
+      edge_ids
+    end
+
+    def extend_ranges! (candidates, canonicalize=false)
+      edge_ids    = merge_edges! candidates, canonicalize
+      full_ranges = range_ends edge_ids
+      merge_rows! candidates, full_ranges, :tlid, :side
     end
 
     # Score a list of candidates. For each candidate:
@@ -355,28 +357,18 @@ module Geocoder::US
       candidates.delete_if {|record| record[:score] < candidates[0][:score]}
     end
 
-    # From a hash of ranges keyed by edge ID, find the ranges that
-    # match the edge ID and the street side of a given candidate.
-    def ranges_for_record (ranges, record)
-      key = record.values_at(:tlid)
-      ranges[key].select {|r| r[:side] == record[:side]}
-    end
-
     # Compute the fractional interpolation distance for a query number along an
     # edge, given all of the ranges for the same side of that edge.
-    def interpolation_distance (number, ranges)
-      interval = total = 0
-      for range in ranges
-        fromhn, tohn = range[:fromhn].to_i, range[:tohn].to_i
-        fromhn, tohn = tohn, fromhn if fromhn > tohn
-        total += tohn - fromhn
-        if fromhn > number
-          interval += tohn - fromhn
-        elsif fromhn <= number and tohn >= number
-          interval += number - fromhn
-        end
+    def interpolation_distance (candidate)
+      fromhn, tohn, number = candidate.values_at(:fromhn, :tohn, :number).map{|x| x.to_i}
+      fromhn, tohn = tohn, fromhn if fromhn > tohn
+      if fromhn > number
+        0.0
+      elsif tohn < number
+        1.0
+      else
+        (number - fromhn) / (tohn - fromhn).to_f
       end
-      return interval.to_f / total.to_f
     end
 
     # Unpack an array of little-endian 4-byte ints, and convert them into
@@ -488,24 +480,10 @@ module Geocoder::US
     # name. If canonicalize is true, attempt to return the "primary" postal
     # place name for the given city, state, or ZIP.
     def geocode_place (address, canonicalize=false)
-      if address.zip.any?
-        places = places_by_zip address.text, address.zip
-      else
-        places = places_by_city address.text, address.city_parts, address.state
-      end
+      places = []
+      places = places_by_zip address.text, address.zip if address.zip.any?
+      places = places_by_city address.text, address.city_parts, address.state if places.none?
       best_places address, places, canonicalize
-    end
-
-    def merge_edges! (candidates, canonicalize=false)
-      edge_ids = unique_values candidates, :tlid
-      if canonicalize
-        records  = primary_records edge_ids
-        merge_rows! candidates, records, :tlid, :zip
-      else
-        records  = edges edge_ids
-        merge_rows! candidates, records, :tlid
-      end
-      edge_ids
     end
 
     def intersecting_angle (a, b, c, d)
@@ -595,33 +573,30 @@ module Geocoder::US
     # range interpolation. If canonicalize is true, attempt to return the
     # "primary" street and place names, if they are different from the ones
     # given.
-    def geocode_address (address, canonical_street=false, canonical_place=false)
+    def geocode_address (address, canonical_place=false)
       candidates = find_candidates address
       return [] if candidates.none?
       return best_places address, candidates, canonical_place if candidates[0][:street].nil?
 
-      # FIXME: this is the point we should be looking for intersections.
-      assign_number! address.number.to_i, candidates
-
+      add_ranges! address, candidates
       score_candidates! address, candidates
       best_candidates! candidates 
 
       # if no number is assigned in the query, only return one
       # result for each street/zip combo
-      if address.number.none?
+      if address.number.any?
+        extend_ranges! candidates, canonical_street
+      else
         by_street = rows_to_h candidates, :street, :zip
         candidates = by_street.values.map {|records| records[0]}
+        merge_edges! candidates, canonical_street
       end
-
-      edge_ids = merge_edges! candidates, canonical_street
 
       # FIXME: need to filter ranges by prenum because
       # there are pathological cases in TIGER/Line with 7000
       # range records per TLID (e.g. 71818718, "71838616)
-      ranges  = rows_to_h all_ranges(address.prenum, edge_ids), :tlid
       candidates.map {|record|
-        side_ranges = ranges_for_record ranges, record
-        dist = interpolation_distance( address.number.to_i, side_ranges )
+        dist = interpolation_distance record
         points = unpack_geometry record[:geometry]
         record[:lon], record[:lat] = interpolate points, dist
       }
