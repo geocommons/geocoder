@@ -3,6 +3,7 @@ require 'sqlite3'
 require 'text'
 
 require 'set'
+require 'pp'
 require 'time'
 
 require 'geocoder/us/address'
@@ -123,8 +124,7 @@ module Geocoder::US
       metaphones = (["metaphone(?,5)"] * tokens.length).join(",")
       sql = "
         SELECT feature.*, levenshtein(?, street) AS street_score
-          FROM feature, range
-          WHERE street_phone IN (#{metaphones})"
+          FROM feature WHERE street_phone IN (#{metaphones})"
       params = [street] + tokens
       return [sql, params]
     end
@@ -146,7 +146,7 @@ module Geocoder::US
     # The ZIP codes are reduced to a set of 3-digit prefixes, broadening
     # the search area.
     def more_features_by_street_and_zip (street, tokens, zips)
-      sql, params = features_by_street(street, tokens, number)
+      sql, params = features_by_street(street, tokens)
       if zips.any?
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
@@ -157,11 +157,11 @@ module Geocoder::US
       execute_statement st, *params
     end
 
-    def ranges_by_feature (fids, prenum, number)
+    def ranges_by_feature (fids, number, prenum)
       in_list = placeholders_for fids
       limit = 4 * fids.length
       sql = "
-        SELECT * FROM feature_edge, range
+        SELECT feature_edge.fid, range.* FROM feature_edge, range
           WHERE fid IN (#{in_list})
           AND feature_edge.tlid = range.tlid"
       params = fids.clone
@@ -187,9 +187,10 @@ module Geocoder::US
     # list of edge IDs.
     def range_ends (edge_ids)
       in_list = placeholders_for edge_ids
+      # FIXME: reordering fromhn and tohn may make interpolation go the wrong way
       sql = "SELECT tlid, side,
                     min(min(fromhn), min(tohn)) AS fromhn,
-                    max(max(fromhn), max(tohn)) AS tohn,
+                    max(max(fromhn), max(tohn)) AS tohn
               FROM range WHERE tlid IN (#{in_list})
               GROUP BY tlid, side;"
       params = edge_ids
@@ -239,12 +240,12 @@ module Geocoder::US
       candidates = []
 
       places = places_by_zip address.text, address.zip if address.zip.any?
-      places += places_by_city address.text, address.city_parts, address.state
+      places = places_by_city address.text, address.city_parts, address.state if places.empty?
 
       return [] if places.empty?
 
       address.city = unique_values places, :city
-      return places if address.street.none?
+      return places if address.street.empty?
       zips = unique_values places, :zip
       candidates = features_by_street_and_zip address.text, address.street_parts, zips
 
@@ -277,8 +278,7 @@ module Geocoder::US
     end
 
     def add_ranges! (address, candidates)
-      number = address.number
-      number = 0 if number.nil? or number.none?
+      number = address.number.to_i
       fids   = unique_values candidates, :fid
       ranges = ranges_by_feature fids, number, address.prenum
       ranges = ranges_by_feature fids, number, nil unless ranges.any?
@@ -331,14 +331,13 @@ module Geocoder::US
           score += 1.0 - candidate[:intersect_score]
           denominator += 1
         elsif address.number and address.number.any?
-          # FIXME: I get the feeling that this doesn't belong here anymore
           fromhn, tohn, hn = [candidate[:fromhn], 
                               candidate[:tohn], 
                               address.number].map {|s|s.to_i}
-          score += 0.5 if fromhn % 2 == hn % 2
-          score += 0.5 if tohn % 2 == hn % 2
           if candidate[:precision] == :range
             score += 1
+            score += 0.5 if fromhn % 2 == hn % 2
+            score += 0.5 if tohn % 2 == hn % 2
           else
             score += 1.0/(candidate[:number].to_i - hn).abs
           end
@@ -552,7 +551,7 @@ module Geocoder::US
     def geocode_intersection (address, canonical_streets=false, canonical_place=false)
       candidates = find_candidates address
       return [] if candidates.none?
-      return best_places address, candidates, canonical_place if candidates[0][:street].nil?
+      return best_places(address, candidates, canonical_place) if candidates[0][:street].nil?
 
       merge_edges! candidates, canonical_streets
       candidates.each {|record|record[:geometry] = unpack_geometry record[:geometry]}
@@ -575,21 +574,26 @@ module Geocoder::US
     # given.
     def geocode_address (address, canonical_place=false)
       candidates = find_candidates address
-      return [] if candidates.none?
-      return best_places address, candidates, canonical_place if candidates[0][:street].nil?
+      return [] if candidates.empty?
+      return best_places(address, candidates, canonical_place) if candidates[0][:street].nil?
 
       add_ranges! address, candidates
       score_candidates! address, candidates
+      
+      #candidates.sort! {|a,b| b[:score] <=> a[:score]}
+      #print "RANGES:\n"
+      #candidates.each {|r| pp(r)}
+
       best_candidates! candidates 
 
       # if no number is assigned in the query, only return one
       # result for each street/zip combo
       if address.number.any?
-        extend_ranges! candidates, canonical_street
+        extend_ranges! candidates, false
       else
         by_street = rows_to_h candidates, :street, :zip
         candidates = by_street.values.map {|records| records[0]}
-        merge_edges! candidates, canonical_street
+        merge_edges! candidates, false
       end
 
       # FIXME: need to filter ranges by prenum because
@@ -624,17 +628,17 @@ module Geocoder::US
     #   the approximate "goodness" of the candidate match.
     # * The other values in the hash will represent various structured
     #   components of the address and place name.
-    def geocode (string, canonical_street=false, canonical_place=false)
+    def geocode (string, canonical_place=false)
       address = Address.new string
       $stderr.print "ADDR: #{address.inspect}\n" if @debug
-      return [] if address.city.none? and address.zip.none?
+      return [] if address.city.empty? and address.zip.none?
       results = []
       start_time = Time.now if @debug
       if address.intersection? and address.street.any? and address.number.none?
-        results = geocode_intersection address, canonical_street, canonical_place
+        results = geocode_intersection address, canonical_place
       end
       if results.empty? and address.street.any?
-        results = geocode_address address, canonical_street, canonical_place
+        results = geocode_address address, canonical_place
       end
       if results.empty?
         results = geocode_place address, canonical_place
