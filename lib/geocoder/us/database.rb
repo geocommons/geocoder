@@ -22,7 +22,7 @@ module Geocoder::US
     # directory as database.rb by default. The cache_size argument is
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
-    def initialize (filename, options)
+    def initialize (filename, options = {})
       defaults = {:debug => :false, :cache_size => 50000, :helper => "sqlite3.so"} 
       options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
