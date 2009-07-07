@@ -37,7 +37,7 @@ class TestDatabase < Test::Unit::TestCase
       result = db.geocode(record[:city] + ", " + record[:state])
       assert_equal result.length, 1
       record.keys.each {|key| assert_equal result[0][key], record[key] }
-      result = db.geocode(record[:zip])
+      result = db.geocode(record[:zip], true)
       assert_equal result.length, 1
       record[:precision] = :zip
       record.keys.each {|key| assert_equal result[0][key], record[key] }
@@ -47,7 +47,7 @@ class TestDatabase < Test::Unit::TestCase
     db = get_db
     return if db.nil?
     FasterCSV.foreach(Base + "/data/db-test.csv", {:headers=>true}) do |row|
-      result = db.geocode(row[0])
+      result = db.geocode(row[0], true)
       result[0][:count] = result.map{|a|[a[:lat], a[:lon]]}.to_set.length
       fields = row.headers - ["comment", "address"]
       fields.each {|f|
