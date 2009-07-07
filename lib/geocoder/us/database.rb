@@ -24,7 +24,7 @@ module Geocoder::US
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
     def initialize (filename, options = {})
-      defaults = {:debug => :false, :cache_size => 50000, :helper => "sqlite3.so"} 
+      defaults = {:debug => false, :cache_size => 50000, :helper => "sqlite3.so"} 
       options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
         unless File.exists? filename
@@ -509,7 +509,7 @@ module Geocoder::US
     def geocode_place (address, canonicalize=false)
       places = []
       places = places_by_zip address.text, address.zip if address.zip.any?
-      places = places_by_city address.text, address.city_parts, address.state if places.none?
+      places = places_by_city address.text, address.city_parts, address.state if places.empty?
       best_places address, places, canonicalize
     end
 
@@ -601,7 +601,7 @@ module Geocoder::US
     def geocode (string, canonical_place=false)
       address = Address.new string
       $stderr.print "ADDR: #{address.inspect}\n" if @debug
-      return [] if address.city.empty? and address.zip.none?
+      return [] if address.city.empty? and address.zip.empty?
       results = []
       start_time = Time.now if @debug
       if address.intersection? and address.street.any? and address.number.empty?
