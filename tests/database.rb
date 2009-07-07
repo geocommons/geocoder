@@ -37,7 +37,7 @@ class TestDatabase < Test::Unit::TestCase
       result = db.geocode(record[:city] + ", " + record[:state])
       assert_equal result.length, 1
       record.keys.each {|key| assert_equal result[0][key], record[key] }
-      result = db.geocode(record[:zip], true)
+      result = db.geocode(record[:zip])
       assert_equal result.length, 1
       record[:precision] = :zip
       record.keys.each {|key| assert_equal result[0][key], record[key] }

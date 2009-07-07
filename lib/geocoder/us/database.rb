@@ -14,7 +14,7 @@ end
 module Geocoder::US
   # Provides an interface to a Geocoder::US database.
   class Database
-    Address_Weight = 1.0
+    Address_Weight = 3.0
     City_Weight = 1.0
 
     # Takes the path of an SQLite 3 database prepared for Geocoder::US
@@ -190,14 +190,23 @@ module Geocoder::US
     # list of edge IDs.
     def range_ends (edge_ids)
       in_list = placeholders_for edge_ids
-      # FIXME: reordering fromhn and tohn may make interpolation go the wrong way
       sql = "SELECT tlid, side,
-                    min(min(fromhn), min(tohn)) AS fromhn,
-                    max(max(fromhn), max(tohn)) AS tohn
+                    min(fromhn) > min(tohn) AS flipped,
+                    min(fromhn) AS from0, max(tohn)   AS to0,
+                    min(tohn)   AS from1, max(fromhn) AS to1
               FROM range WHERE tlid IN (#{in_list})
               GROUP BY tlid, side;"
-      params = edge_ids
-      execute sql, *params
+      execute(sql, *edge_ids).map {|r|
+        if r[:flipped] == "0"
+          r[:flipped] = false
+          r[:fromhn], r[:tohn] = r[:from0], r[:to0]
+        else
+          r[:flipped] = true
+          r[:fromhn], r[:tohn] = r[:from1], r[:to1]
+        end
+        [:from0, :to0, :from1, :to1].each {|k| r.delete k}
+        r
+      }
     end
 
     def intersections_by_fid (fids)
@@ -215,8 +224,8 @@ module Geocoder::US
               AND fid IN (#{in_list});
         CREATE INDEX intersect_pt_idx ON intersection (point);"
       execute sql, *(fids + fids)
-      # the a.fid < b.fid inequality guarantees ordering of street names
-      # in the output
+      # the a.fid < b.fid inequality guarantees consistent ordering of street
+      # names in the output
       results = execute "
         SELECT a.fid AS fid1, b.fid AS fid2, a.point 
             FROM intersection a, intersection b, feature f1, feature f2
@@ -271,18 +280,21 @@ module Geocoder::US
       places = []
       candidates = []
 
-      places = places_by_zip address.text, address.zip if address.zip.any?
-      places = places_by_city address.text, address.city_parts, address.state if places.empty?
+      city = address.city.sort {|a,b|a.length <=> b.length}[0]
+      places = places_by_zip city, address.zip if address.zip.any?
+      places = places_by_city city, address.city_parts, address.state if places.empty?
 
       return [] if places.empty?
 
       address.city = unique_values places, :city
       return places if address.street.empty?
+
       zips = unique_values places, :zip
-      candidates = features_by_street_and_zip address.text, address.street_parts, zips
+      street = address.street.sort {|a,b|a.length <=> b.length}[0]
+      candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?
-        candidates = more_features_by_street_and_zip address.text, address.street_parts, zips
+        candidates = more_features_by_street_and_zip street[0], address.street_parts, zips
       end
 
       merge_rows! candidates, places, :zip
@@ -318,20 +330,15 @@ module Geocoder::US
       assign_number! number, candidates
     end
 
-    def merge_edges! (candidates, canonicalize=false)
+    def merge_edges! (candidates)
       edge_ids = unique_values candidates, :tlid
-      if canonicalize
-        records  = primary_records edge_ids
-        merge_rows! candidates, records, :tlid, :zip
-      else
-        records  = edges edge_ids
-        merge_rows! candidates, records, :tlid
-      end
+      records  = edges edge_ids
+      merge_rows! candidates, records, :tlid
       edge_ids
     end
 
-    def extend_ranges! (candidates, canonicalize=false)
-      edge_ids    = merge_edges! candidates, canonicalize
+    def extend_ranges! (candidates)
+      edge_ids    = merge_edges! candidates
       full_ranges = range_ends edge_ids
       merge_rows! candidates, full_ranges, :tlid, :side
     end
@@ -353,25 +360,38 @@ module Geocoder::US
     def score_candidates! (address, candidates)
       for candidate in candidates
         compare = [:prenum, :state, :zip]
-        denominator = compare.length + Address_Weight + City_Weight
+        denominator = 1.0 + Address_Weight + City_Weight
 
         score = (1.0 - candidate[:street_score].to_f) * Address_Weight
         score += (1.0 - candidate[:city_score].to_f) * City_Weight
-        compare.each {|key| score += 1 if address.send(key) == candidate[key]}
+        compare.each {|key|
+          src  = address.send(key); src = src.downcase if src
+          dest = candidate[key]; dest = dest.downcase if dest
+          score += 1.0/compare.length if src == dest
+        }
 
         if address.number and address.number.any?
-          fromhn, tohn, hn = [candidate[:fromhn], 
-                              candidate[:tohn], 
-                              address.number].map {|s|s.to_i}
+          subscore = 0.0
+          fromhn, tohn, assigned, hn = [
+              candidate[:fromhn], 
+              candidate[:tohn], 
+              candidate[:number], 
+              address.number].map {|s|s.to_i}
           if candidate[:precision] == :range
-            score += 1
-            score += 0.5 if fromhn % 2 == hn % 2
-            score += 0.5 if tohn % 2 == hn % 2
+            subscore += 1
           else
-            score += 1.0/(candidate[:number].to_i - hn).abs
+            subscore += 1.0/(assigned - hn).abs
           end
+          if hn > 0 and assigned > 0
+            # only credit parity if a number was given *and* assigned
+            subscore += 0.5 if fromhn % 2 == hn % 2
+            subscore += 0.5 if tohn % 2 == hn % 2
+          end
+          candidate[:number_score] = subscore
+          score += subscore
           denominator += 2
         end
+        candidate[:raw_score] = score.to_f
         candidate[:score] = score.to_f / denominator
       end
     end
@@ -379,8 +399,8 @@ module Geocoder::US
     # Find the candidates in a list of candidates that are tied for the
     # top score and prune the remainder from the list.
     def best_candidates! (candidates)
-      # lookup.rst (8)
       candidates.sort! {|a,b| b[:score] <=> a[:score]}
+      #candidates.each {|c| print "#{c[:number]} #{c[:street]} #{c[:raw_score]} #{c[:number_score]} #{c[:street_score]} #{c[:city_score]}\n" }
       candidates.delete_if {|record| record[:score] < candidates[0][:score]}
     end
 
@@ -388,6 +408,8 @@ module Geocoder::US
     # edge, given all of the ranges for the same side of that edge.
     def interpolation_distance (candidate)
       fromhn, tohn, number = candidate.values_at(:fromhn, :tohn, :number).map{|x| x.to_i}
+      $stderr.print "NUM : #{fromhn} < #{number} < #{tohn} (flipped? #{candidate[:flipped]})\n" if @debug
+      # don't need this anymore since range_ends was improved...
       fromhn, tohn = tohn, fromhn if fromhn > tohn
       if fromhn > number
         0.0
@@ -481,7 +503,7 @@ module Geocoder::US
       record.keys.each {|k| record[k] = "" if record[k].nil? } # clean up nils
       record.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :fid, :fid1, :fid2, :street_phone,
-           :city_phone, :fromhn, :tohn, :paflag,
+           :city_phone, :fromhn, :tohn, :paflag, :flipped,
            :priority, :fips_class, :fips_place, :status].include? k}
     end
 
@@ -559,19 +581,18 @@ module Geocoder::US
       # if no number is assigned in the query, only return one
       # result for each street/zip combo
       if address.number.any?
-        extend_ranges! candidates, false
+        extend_ranges! candidates
       else
         by_street = rows_to_h candidates, :street, :zip
         candidates = by_street.values.map {|records| records[0]}
-        merge_edges! candidates, false
+        merge_edges! candidates
       end
 
-      # FIXME: need to filter ranges by prenum because
-      # there are pathological cases in TIGER/Line with 7000
-      # range records per TLID (e.g. 71818718, "71838616)
       candidates.map {|record|
         dist = interpolation_distance record
+        $stderr.print "DIST: #{dist}\n" if @debug
         points = unpack_geometry record[:geometry]
+        points.reverse! if record[:flipped]
         record[:lon], record[:lat] = interpolate points, dist
       }
       

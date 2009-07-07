@@ -67,8 +67,8 @@ module Geocoder::US
 
       @zip = text.scan(Match[:zip])[-1]
       if @zip
-        # FIXME: What if this string appears twice?
-        text[$&] = ""
+        idx = text.rindex($&)
+        text[idx...idx+$&.length] = ""
         text.sub! /\s*,?\s*$/o, ""
         @zip, @plus4 = @zip.map {|s|s.strip}
       else
@@ -77,8 +77,8 @@ module Geocoder::US
 
       @state = text.scan(Match[:state])[-1]
       if @state
-        # FIXME: What if this string appears twice?
-        text[$&] = ""
+        idx = text.rindex($&)
+        text[idx...idx+$&.length] = ""
         text.sub! /\s*,?\s*$/o, ""
         full_state = @state[0].strip # special case: New York
         @state = State[full_state]
@@ -91,16 +91,13 @@ module Geocoder::US
       # FIXME: 230 Fish And Game Rd, Hudson NY 12534
       if @number # and not intersection?
         # FIXME: What if this string appears twice?
-        text[$&] = ""
+        idx = text.index($&)
+        text[idx...idx+$&.length] = ""
         text.sub! /^\s*,?\s*/o, ""
         @prenum, @number, @sufnum = @number.map {|s| s and s.strip}
       else
         @prenum = @number = @sufnum = ""
       end
-
-      # FIXME: special case: detect when @street contains
-      # only abbrs, and when it does, stick the number back
-      # on the front
 
       # FIXME: special case: Name_Abbr gets a bit aggressive
       # about replacing St with Saint. exceptional case:
@@ -113,11 +110,10 @@ module Geocoder::US
         @street |= add
         add = @street.map {|item| item.gsub(Std_Abbr.regexp) {|m| Std_Abbr[m]}}
         @street |= add
-        # unfortunate artifact due to \b and S regexping "south"
-        # and a lack of regexp lookbehind in Ruby
-        @street.map! {|s| s.gsub(/'S\b/o, "'s")} 
         @street.map! {|item| expand_numbers(item)}
         @street.flatten!
+        @street.map! {|s| s.downcase}
+        @street.uniq!
       else
         @street = []
       end
@@ -128,9 +124,10 @@ module Geocoder::US
       @city = text.scan(Match[:city])
       if @city.any?
         @city = [@city[-1].strip]
-        #@city.map! {|s|s.strip}
         add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
         @city |= add
+        @city.map! {|s| s.downcase}
+        @city.uniq!
       else
         @city = []
       end
@@ -151,15 +148,16 @@ module Geocoder::US
         strings |= (0...tokens.length).map {|i|
                    (i...tokens.length).map {|j| tokens[i..j].join(" ")}}.flatten
       }
+
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
-      # Answer: Yes, it breaks on simple things like "Prairie St"
-      good_strings = strings.reject {|s| Std_Abbr[s] == s}
-      strings = good_strings if good_strings.any?
+      # Answer: Yes, it breaks on simple things like "Prairie St" or "Front St"
+      good_strings = strings.reject {|s| Std_Abbr.key? s}
+      strings = good_strings if good_strings.any? {|s| not s[" "]}
 
       # Try a simpler case of adding the @number in case everything is an abbr.
       strings += [@number] if strings.all? {|s| Std_Abbr.key? s or Name_Abbr.key? s}
-      strings.map {|s| s.downcase}.to_set.to_a 
+      strings.uniq
     end
   
     def city_parts
@@ -172,9 +170,9 @@ module Geocoder::US
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on "Prairie"
-      #good_strings = strings.reject {|s| Std_Abbr[s] == s}
-      #good_strings.any? ? good_strings : strings
-      strings
+      good_strings = strings.reject {|s| Std_Abbr[s] == s}
+      strings = good_strings if good_strings.any?
+      strings.uniq
     end
 
     def city= (strings)
