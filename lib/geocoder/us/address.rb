@@ -154,7 +154,7 @@ module Geocoder::US
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on simple things like "Prairie St"
-      good_strings = strings.reject {|s| Std_Abbr.key? s}
+      good_strings = strings.reject {|s| Std_Abbr[s] == s}
       strings = good_strings if good_strings.any?
 
       # Try a simpler case of adding the @number in case everything is an abbr.
