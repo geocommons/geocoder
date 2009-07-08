@@ -19,12 +19,12 @@ class TestConstants < Test::Unit::TestCase
     assert_kind_of Hash, @map
   end  
   def test_key
-    assert @map.key? "Abbreviation"
-    assert @map.key? "abbreviation"
+    assert @map.key?( "Abbreviation" )
+    assert @map.key?( "abbreviation" )
     assert !(@map.key? "abbreviation?")
-    assert @map.key? "abbr"
-    assert @map.key? "Two words"
-    assert @map.key? "2words"
+    assert @map.key?( "abbr" )
+    assert @map.key?( "Two words" )
+    assert @map.key?( "2words" )
   end
   def test_fetch
     assert_equal "abbr", @map["Abbreviation"]
@@ -35,14 +35,14 @@ class TestConstants < Test::Unit::TestCase
     assert_equal "2words", @map["2words"]
   end
   def test_partial
-    assert @map.partial? "Abbreviation"
-    assert @map.partial? "Two"
-    assert @map.partial? "two"
+    assert @map.partial?( "Abbreviation" )
+    assert @map.partial?( "Two" )
+    assert @map.partial?( "two" )
     assert !(@map.partial? "words")
-    assert @map.partial? "Some"
+    assert @map.partial?( "Some" )
     assert !(@map.partial? "words")
-    assert @map.partial? "Some three"
-    assert @map.partial? "SOME THREE WORDS"
+    assert @map.partial?( "Some three" )
+    assert @map.partial?( "SOME THREE WORDS" )
   end
   def test_constants
     assert_kind_of Map, Directional

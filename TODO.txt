@@ -1,0 +1,8 @@
+1. Check interpolate measure: scale longitude or not?
+5. Intersections...
+    - import ALL linestrings (even those with without ranges)
+    - throw away internal points on lines that don't have ranges
+7. Documentation (*)
+8. Make SQLite memory cache size an option to the Database constructor
+9. Precision and accuracy measure
+10. Street line set back

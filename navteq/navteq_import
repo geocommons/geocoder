@@ -1,0 +1,39 @@
+#!/bin/bash
+
+TMP="/tmp/navteq-import.$$"
+SHPS="local_streets"
+DBFS=""
+BASE=$(dirname $0)
+PATH=$PATH:$BASE/../bin
+SQL="$BASE/../sql"
+HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
+DATABASE=$1
+shift
+
+mkdir -p $TMP || exit 1
+
+[ ! -r $DATABASE ] && cat ${SQL}/create.sql ${SQL}/place.sql | sqlite3 $DATABASE
+ 
+if [ x"$1" = x"" ]; then
+    cat
+else
+    ls $@
+fi | while read county; do
+    echo "--- $county"
+    if [ -r ${county%.zip}.zip ]; then
+        unzip -q $(ls ${county}.zip) -d $TMP
+    else
+        cp ${county%.*}.* $TMP
+    fi
+    (echo ".load $HELPER_LIB" && \
+     cat ${BASE}/prepare.sql && \
+     for file in $SHPS; do
+       shp2sqlite -aS $(ls ${TMP}/${file}.shp) ${file}
+     done && \
+     for file in $DBFS; do
+       shp2sqlite -an $(ls ${TMP}/${file}.dbf) ${file}
+     done && \
+     cat ${BASE}/convert.sql) | sqlite3 $DATABASE
+    rm -f $TMP/*
+done 2>&1 | tee import-$$.log
+rm -rf $TMP

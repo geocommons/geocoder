@@ -1,3 +1,9 @@
+-- create temporary tables to hold the TIGER/Line data before it's
+--   transformed and loaded into the permanent tables.
+--
+-- this file was made by running 'shp2pgsql -p' on each of the 
+--   TIGER/Line shapefiles and then massaging the result by hand.
+--
 PRAGMA temp_store=MEMORY;
 PRAGMA journal_mode=MEMORY;
 PRAGMA synchronous=OFF;

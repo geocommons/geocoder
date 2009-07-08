@@ -8,7 +8,6 @@ clean:
 	$(MAKE)	-C liblwgeom clean
 	$(MAKE) -C shp2sqlite clean
 
-
 install: all
-	cp libsqlite3_geocoder/*.so ../lib
+	cp libsqlite3_geocoder/*.so ../lib/geocoder/us/sqlite3.so
 	$(MAKE) -C shp2sqlite install

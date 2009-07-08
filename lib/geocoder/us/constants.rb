@@ -6,6 +6,8 @@ end
 
 module Geocoder::US
   class Map < Hash
+    # The Map class provides a two-way mapping between postal abbreviations
+    # and their fully written equivalents.
     attr_accessor :partial
     def self.[] (*items)
       hash = super(*items)
@@ -14,6 +16,8 @@ module Geocoder::US
       hash.values.each {|v| hash[v.downcase] = v}
       hash.freeze
     end
+    # The build_partial method constructs a hash of case-insensitive,
+    # whitespace-delimited prefixes to keys and values in the two-way Map.
     def build_partial
       @partial = Set.new()
       [keys, values].flatten.each {|item|
@@ -23,6 +27,8 @@ module Geocoder::US
         }
       }
     end
+    # The partial? method returns true if the key is a prefix of some
+    # key in the Map.
     def partial? (key)
       @partial.member? key.downcase
     end 
@@ -34,7 +40,9 @@ module Geocoder::US
     end
   end
 
-  # 2008 TIGER/Line technical documentation Appendix C
+  # The Directional constant maps compass direction words in English and
+  # Spanish to their 1- or 2- letter abbreviations.  See 2008 TIGER/Line
+  # technical documentation Appendix C for more details.
   Directional = Map[
     "North"	=> "N",
     "South"	=> "S",
@@ -54,7 +62,8 @@ module Geocoder::US
     "Sudoeste"	=> "SO"
   ]
 
-  # 2008 TIGER/Line technical documentation Appendix D
+  # The Prefix_Qualifier constant maps feature prefix qualifiers to their
+  # abbreviations. See 2008 TIGER/Line technical documentation Appendix D.
   Prefix_Qualifier = Map[
     "Alternate"	=> "Alt",
     "Business"	=> "Bus",
@@ -68,7 +77,8 @@ module Geocoder::US
     "Spur"	=> "Spr",
   ]
 
-  # 2008 TIGER/Line technical documentation Appendix D
+  # The Suffix_Qualifier constant maps feature suffix qualifiers to their
+  # abbreviations. See 2008 TIGER/Line technical documentation Appendix D.
   Suffix_Qualifier = Map[
     "Access"	=> "Acc",
     "Alternate"	=> "Alt",
@@ -87,8 +97,10 @@ module Geocoder::US
     "Overpass"	=> "Ovp",
   ]
 
-  # subset of 2008 TIGER/Line technical documentation Appendix E
-  # extracted from TIGER/Line database import
+  # The Prefix_Canonical constant maps canonical TIGER/Line street type
+  # prefixes to their abbreviations. This list is the subset of the list from
+  # 2008 TIGER/Line technical documentation Appendix E that was extracted from
+  # a TIGER/Line database import.
   Prefix_Canonical = {
     "Arcade"                            => "Arc",
     "Autopista"                         => "Autopista",
@@ -191,7 +203,9 @@ module Geocoder::US
     "Vista"                             => "Vis",
   }
 
-  # merged from http://www.usps.com/ncsc/lookups/abbr_suffix.txt
+  # The Prefix_Alternate constant maps alternate prefix street types to
+  # their canonical abbreviations. This list was merged in from the USPS
+  # list at http://www.usps.com/ncsc/lookups/abbr_suffix.txt.
   Prefix_Alternate = {
     "Av"			=> "Ave",
     "Aven"			=> "Ave",
@@ -236,11 +250,14 @@ module Geocoder::US
     "Vsta"			=> "Vis"
   }
   
-  # Canonical abbreviations + USPS accepted alternates
+  # The Prefix_Type constant merges the canonical prefix type abbreviations
+  # with their USPS accepted alternates.
   Prefix_Type = Map[ Prefix_Canonical.merge(Prefix_Alternate) ]
 
-  # subset of 2008 TIGER/Line technical documentation Appendix E
-  # extracted from TIGER/Line database import
+  # The Suffix_Canonical constant maps canonical TIGER/Line street type
+  # suffixes to their abbreviations. This list is the subset of the list from
+  # 2008 TIGER/Line technical documentation Appendix E that was extracted from
+  # a TIGER/Line database import.
   Suffix_Canonical = {
     "Alley"                             => "Aly",
     "Arcade"                            => "Arc",
@@ -325,7 +342,9 @@ module Geocoder::US
     "Way"                               => "Way",
   }
   
-  # merged from http://www.usps.com/ncsc/lookups/abbr_suffix.txt
+  # The Suffix_Alternate constant maps alternate suffix street types to
+  # their canonical abbreviations. This list was merged in from the USPS
+  # list at http://www.usps.com/ncsc/lookups/abbr_suffix.txt.
   Suffix_Alternate = {
     "Allee"			=> "Aly",
     "Ally"			=> "Aly",
@@ -417,10 +436,12 @@ module Geocoder::US
     "Wy"			=> "Way",
   }
 
-  # Canonical abbreviations + USPS accepted alternates
+  # The Suffix_Type constant merges the canonical suffix type abbreviations
+  # with their USPS accepted alternates.
   Suffix_Type = Map[ Suffix_Canonical.merge(Suffix_Alternate) ]
 
-  # http://www.usps.com/ncsc/lookups/abbr_sud.txt
+  # The Unit_Type constant lists acceptable USPS unit type abbreviations
+  # from http://www.usps.com/ncsc/lookups/abbr_sud.txt.
   Unit_Type = Map[
     "Apartment"	=> "Apt",
     "Basement"	=> "Bsmt",
@@ -447,6 +468,10 @@ module Geocoder::US
     "Upper"	=> "Uppr",
   ]
 
+  # The Name_Abbr constant maps common toponym abbreviations to their
+  # full word equivalents. This list was constructed partly by hand, and
+  # partly by matching USPS alternate abbreviations with feature names
+  # found in the TIGER/Line dataset.
   Name_Abbr = Map[
     "Av"	=> "Avenue",
     "Ave"	=> "Avenue",
@@ -566,6 +591,8 @@ module Geocoder::US
     "Xing"	=> "Crossing",
   ]
 
+  # The State constant maps US state and territory names to their 2-letter
+  # USPS abbreviations.
   State = Map[
     "Alabama"		=> "AL",
     "Alaska"		=> "AK",

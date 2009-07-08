@@ -1,3 +1,5 @@
+-- initialize the database tables.
+-- 'place' contains the gazetteer of place names.
 CREATE TABLE place(
   zip CHAR(5),
   city VARCHAR(100),
@@ -10,9 +12,11 @@ CREATE TABLE place(
   fips_place CHAR(7),
   fips_county CHAR(5),
   priority char(1));
+-- 'edge' stores the line geometries and their IDs.
 CREATE TABLE edge (
   tlid INTEGER(10) PRIMARY KEY,
   geometry BLOB);
+-- 'feature' stores the name(s) and ZIP(s) of each edge.
 CREATE TABLE feature (
   tlid INTEGER(10),
   street VARCHAR(100),
@@ -24,11 +28,12 @@ CREATE TABLE feature (
   suftyp VARCHAR(3),
   sufqual VARCHAR(2),
   paflag BOOLEAN,
-  zip INTEGER(5));
+  zip CHAR(5));
+-- 'range' stores the address range(s) for each edge.
 CREATE TABLE range (
   tlid INTEGER(10),
   fromhn INTEGER(6),
   tohn INTEGER(6),
-  prefix VARCHAR(12),
-  zip INTEGER(5),
+  prenum VARCHAR(12),
+  zip CHAR(5),
   side CHAR(1));
