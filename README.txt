@@ -30,7 +30,7 @@ public domain sources.
 
 To build Geocoder::US, you will need gcc/g++, make, bash or equivalent, the
 standard *NIX 'unzip' utility, and the SQLite 3 executable and development
-files installed on your system.
+files installed on your system. To compile on OSX use gcc version 4.2.1.
 
 To use the Ruby interface, you will need the 'Text' gem installed from
 rubyforge. To run the tests, you will also need the 'fastercsv' gem.
@@ -58,7 +58,7 @@ Unpack the source and run 'make'. This will compile the SQLite 3 extension
 needed by Geocoder::US, the Shapefile import utility, and the Geocoder-US
 gem.
 
-You can run 'make install' as root to install the gem systemwide.
+You can run 'make install' as root to install the gem systemwide.  
 
 == Generating a Geocoder::US Database
 
