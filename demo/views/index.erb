@@ -5,7 +5,7 @@
   var lon = 5;
   var lat = 40;
   var zoom = 5;
-  var map, layer;
+  var map, layer, markers;
 
   function init(){
     var options = {
@@ -27,7 +27,7 @@
         }
       );
       map.addLayer(mapnik);
-      var markers = new OpenLayers.Layer.Markers( "Markers" );
+      markers = new OpenLayers.Layer.Markers( "Markers" );
       map.addLayer(markers);
       map.addControl(new OpenLayers.Control.LayerSwitcher());
     }
