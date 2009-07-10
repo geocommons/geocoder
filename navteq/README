@@ -1,0 +1,4 @@
+The navteq_import script in this directory is designed to be used with Navteq's
+local_streets layer. It works basically like tiger_import, except that you
+provide either a list of .zip files containing the local_streets.* files on the
+command line, or via standard input.

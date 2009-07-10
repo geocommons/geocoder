@@ -475,7 +475,7 @@ module Geocoder::US
 
   Std_Abbr = Map[
     [Directional, Prefix_Qualifier, Suffix_Qualifier,
-     Prefix_Type, Suffix_Type, Unit_Type].inject({}) {|x,y|x.merge y}
+     Prefix_Type, Suffix_Type].inject({}) {|x,y|x.merge y}
   ]
 
   # The Name_Abbr constant maps common toponym abbreviations to their

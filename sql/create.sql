@@ -18,11 +18,15 @@ CREATE TABLE edge (
   geometry BLOB);
 -- 'feature' stores the name(s) and ZIP(s) of each edge.
 CREATE TABLE feature (
-  tlid INTEGER(10),
+  fid INTEGER PRIMARY KEY,
   street VARCHAR(100),
   street_phone VARCHAR(5),
   paflag BOOLEAN,
   zip CHAR(5));
+-- 'feature_edge' links each edge to a feature.
+CREATE TABLE feature_edge (
+  fid INTEGER,
+  tlid INTEGER);
 -- 'range' stores the address range(s) for each edge.
 CREATE TABLE range (
   tlid INTEGER(10),

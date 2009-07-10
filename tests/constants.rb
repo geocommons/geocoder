@@ -34,16 +34,16 @@ class TestConstants < Test::Unit::TestCase
     assert_equal "2words", @map["Two words"]
     assert_equal "2words", @map["2words"]
   end
-  def test_partial
-    assert @map.partial?( "Abbreviation" )
-    assert @map.partial?( "Two" )
-    assert @map.partial?( "two" )
-    assert !(@map.partial? "words")
-    assert @map.partial?( "Some" )
-    assert !(@map.partial? "words")
-    assert @map.partial?( "Some three" )
-    assert @map.partial?( "SOME THREE WORDS" )
-  end
+#  def test_partial
+#    assert @map.partial?( "Abbreviation" )
+#    assert @map.partial?( "Two" )
+#    assert @map.partial?( "two" )
+#    assert !(@map.partial? "words")
+#    assert @map.partial?( "Some" )
+#    assert !(@map.partial? "words")
+#    assert @map.partial?( "Some three" )
+#    assert @map.partial?( "SOME THREE WORDS" )
+#  end
   def test_constants
     assert_kind_of Map, Directional
     assert_kind_of Map, Prefix_Qualifier
