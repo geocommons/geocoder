@@ -294,7 +294,7 @@ module Geocoder::US
       candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?
-        candidates = more_features_by_street_and_zip street[0], address.street_parts, zips
+        candidates = more_features_by_street_and_zip street, address.street_parts, zips
       end
 
       merge_rows! candidates, places, :zip
