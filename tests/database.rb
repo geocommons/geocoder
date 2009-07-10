@@ -54,7 +54,8 @@ class TestDatabase < Test::Unit::TestCase
         sample = row[f] || ""
         given  = result[0][f.to_sym] || ""
         sample = sample.to_f if given.kind_of? Float or given.kind_of? Fixnum
-        assert_equal sample, given, "sample: #{sample.inspect}, given: #{given.inspect}"
+        assert_equal sample, given, "row: #{row.inspect}\nfield: #{f.inspect} sample: #{sample.inspect}, given: #{given.inspect}"
+
       }
     end
   end

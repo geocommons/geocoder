@@ -574,6 +574,9 @@ module Geocoder::US
       return [] if candidates.empty?
       return best_places(address, candidates, canonical_place) if candidates[0][:street].nil?
 
+      score_candidates! address, candidates
+      best_candidates! candidates 
+
       add_ranges! address, candidates
       score_candidates! address, candidates
       best_candidates! candidates 
