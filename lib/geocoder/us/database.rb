@@ -14,7 +14,7 @@ end
 module Geocoder::US
   # Provides an interface to a Geocoder::US database.
   class Database
-    Address_Weight = 3.0
+    Address_Weight = 2.0
     City_Weight = 1.0
 
     # Takes the path of an SQLite 3 database prepared for Geocoder::US
@@ -365,9 +365,9 @@ module Geocoder::US
         score = (1.0 - candidate[:street_score].to_f) * Address_Weight
         score += (1.0 - candidate[:city_score].to_f) * City_Weight
         compare.each {|key|
-          src  = address.send(key); src = src.downcase if src
-          dest = candidate[key]; dest = dest.downcase if dest
-          score += 1.0/compare.length if src == dest
+          src  = address.send(key); src = src ? src.downcase : ""
+          dest = candidate[key]; dest = dest ? dest.downcase : ""
+          score += (src == dest) ? 1 : 0
         }
 
         if address.number and address.number.any?
@@ -392,6 +392,7 @@ module Geocoder::US
           denominator += 2
         end
         candidate[:raw_score] = score.to_f
+        candidate[:denominator] = denominator
         candidate[:score] = score.to_f / denominator
       end
     end
@@ -576,7 +577,8 @@ module Geocoder::US
 
       score_candidates! address, candidates
       best_candidates! candidates 
-
+    
+      #candidates.sort {|a,b| b[:score] <=> a[:score]}.each {|candidate|
       add_ranges! address, candidates
       score_candidates! address, candidates
       best_candidates! candidates 
