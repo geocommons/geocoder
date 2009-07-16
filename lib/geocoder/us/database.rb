@@ -14,7 +14,7 @@ end
 module Geocoder::US
   # Provides an interface to a Geocoder::US database.
   class Database
-    Address_Weight = 3.0
+    Street_Weight = 3.0
     Number_Weight = 2.0
     Parity_Weight = 1.25
     City_Weight = 1.0
@@ -129,7 +129,8 @@ module Geocoder::US
       metaphones = (["metaphone(?,5)"] * tokens.length).join(",")
       sql = "
         SELECT feature.*, levenshtein(?, street) AS street_score
-          FROM feature WHERE street_phone IN (#{metaphones})"
+          FROM feature
+          WHERE street_phone IN (#{metaphones})"
       params = [street] + tokens
       return [sql, params]
     end
@@ -337,6 +338,7 @@ module Geocoder::US
       edge_ids = unique_values candidates, :tlid
       records  = edges edge_ids
       merge_rows! candidates, records, :tlid
+      candidates.reject! {|record| record[:tlid].nil?}
       edge_ids
     end
 
@@ -364,9 +366,9 @@ module Geocoder::US
       for candidate in candidates
         candidate[:components] = {}
         compare = [:prenum, :state, :zip]
-        denominator = compare.length + Address_Weight + City_Weight
+        denominator = compare.length + Street_Weight + City_Weight
 
-        street_score = (1.0 - candidate[:street_score].to_f) * Address_Weight
+        street_score = (1.0 - candidate[:street_score].to_f) * Street_Weight
         candidate[:components][:street] = street_score
         city_score   = (1.0 - candidate[:city_score].to_f) * City_Weight
         candidate[:components][:city] = city_score

@@ -103,6 +103,8 @@ module Geocoder::US
       # about replacing St with Saint. exceptional case:
       # Sault Ste. Marie
 
+      # FIXME: PO Box should geocode to ZIP
+
       @street = text.scan(Match[:street])
       if @street.any?
         @street.map! {|s|s.strip}
@@ -152,8 +154,20 @@ module Geocoder::US
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on simple things like "Prairie St" or "Front St"
-      good_strings = strings.reject {|s| Std_Abbr.key? s}
-      strings = good_strings if good_strings.any? {|s| not s[" "]}
+      prefix = Regexp.new("^" + Prefix_Type.regexp.source + "\s*", Regexp::IGNORECASE)
+      suffix = Regexp.new("\s*" + Suffix_Type.regexp.source + "$", Regexp::IGNORECASE)
+      predxn = Regexp.new("^" + Directional.regexp.source + "\s*", Regexp::IGNORECASE)
+      sufdxn = Regexp.new("\s*" + Directional.regexp.source + "$", Regexp::IGNORECASE)
+      good_strings = strings.map {|s|
+        s = s.clone
+        s.gsub!(predxn, "")
+        s.gsub!(sufdxn, "")
+        s.gsub!(prefix, "")
+        s.gsub!(suffix, "")
+        s
+      }
+      good_strings.reject! {|s| s.empty?}
+      strings = good_strings if good_strings.any? {|s| not Std_Abbr.key?(s) and not Name_Abbr.key?(s)}
 
       # Try a simpler case of adding the @number in case everything is an abbr.
       strings += [@number] if strings.all? {|s| Std_Abbr.key? s or Name_Abbr.key? s}
@@ -170,7 +184,7 @@ module Geocoder::US
       # Don't return strings that consist solely of abbreviations.
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on "Prairie"
-      good_strings = strings.reject {|s| Std_Abbr[s] == s}
+      good_strings = strings.reject {|s| Std_Abbr.key? s}
       strings = good_strings if good_strings.any?
       strings.uniq
     end

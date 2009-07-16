@@ -53,3 +53,5 @@
 "4018 W Ustick Rd, Meridian ID",4413,W Ustick Rd,Nampa,ID,83687,-116.479463,43.634111,1,street
 "129 E Williams Field Rd, Gilbert AZ 85295",800,E Williams Field Rd,Gilbert,AZ,85295,-111.772768,33.306601,1,street
 "2518 S Pacific Hwy, Medford OR",2499,S Pacific Hwy,Medford,OR,97501,-122.849335,42.301566,1,street
+"1111 River Rd Apt A17, Edgewater NJ 07020",1111,River Rd,Edgewater,NJ,07020,-73.972523,40.832584,1,FIXME: parsing
+"460 West St, Amherst MA 01002-2964",460,West St,Amherst,MA,01002,-72.519936,42.341085,1,address is all abbreviations
