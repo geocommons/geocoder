@@ -52,6 +52,28 @@ the system-installed version), using `which sqlite3`. Also, be sure that you've
 added your source install prefix (usually /usr/local) to /etc/ld.so.conf (or
 its moral equivalent) and that you've run /sbin/ldconfig.
 
+== Thread safety
+
+SQLite 3 is not designed for concurrent use of a single database handle across
+multiple threads. Therefore, to prevent segfaults, Geocoder::US::Database
+implements a global mutex that wraps all database access. The use of this mutex
+will ensure stability in multi-threaded applications, but incurs a performance
+penalty. However, since the database is read-only from Ruby, there's no reason
+in principle why multi-threaded apps can't each have their own database handle.
+
+To disable the mutex for better performance, you can do the following:
+
+ * Read the following and make sure you understand them:
+    * http://www.sqlite.org/faq.html#q6
+    * http://www.sqlite.org/cvstrac/wiki?p=MultiThreading
+ * Make sure you have compiled SQLite 3 with thread safety enabled.
+ * Instantiate a separate Geocoder::US::Database object for *each* thread
+   in your Ruby script, and pass :threadsafe => true to new() to disable mutex
+   synchronization.
+
+Per the SQLite 3 documentation, do *not* attempt to retain a
+Geocoder::US::Database object across a fork! "Problems will result if you do."
+
 == Building Geocoder::US
 
 Unpack the source and run 'make'. This will compile the SQLite 3 extension

@@ -18,6 +18,7 @@ module Geocoder::US
     Number_Weight = 2.0
     Parity_Weight = 1.25
     City_Weight = 1.0
+    @@mutex = Mutex.new
 
     # Takes the path of an SQLite 3 database prepared for Geocoder::US
     # as the sole mandatory argument. The helper argument points to the
@@ -26,14 +27,24 @@ module Geocoder::US
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
     def initialize (filename, options = {})
-      defaults = {:debug => false, :cache_size => 50000, :helper => "sqlite3.so"} 
+      defaults = {:debug => false, :cache_size => 50000,
+                  :helper => "sqlite3.so", :threadsafe => false}
       options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
         unless File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
       @debug = options[:debug]
+      @threadsafe = options[:threadsafe]
       tune options[:helper], options[:cache_size]
+    end
+
+    def synchronize
+      if not @threadsafe
+        @@mutex.synchronize { yield }
+      else
+        yield
+      end
     end
 
   #private
@@ -44,19 +55,23 @@ module Geocoder::US
       if File.expand_path(helper) != helper
         helper = File.join(File.dirname(__FILE__), helper)
       end
-      @db.enable_load_extension(1)
-      @db.load_extension(helper)
-      @db.enable_load_extension(0)
-      @db.cache_size = cache_size
-      @db.temp_store = "memory"
-      @db.synchronous = "off"
+      synchronize do
+        @db.enable_load_extension(1)
+        @db.load_extension(helper)
+        @db.enable_load_extension(0)
+        @db.cache_size = cache_size
+        @db.temp_store = "memory"
+        @db.synchronous = "off"
+      end
     end
 
     # Return a cached SQLite statement object, preparing it first if
     # it's not already in the cache.
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
-      @st[sql] ||= @db.prepare sql
+      synchronize do
+        @st[sql] ||= @db.prepare sql
+      end
       return @st[sql]
     end
 
@@ -89,10 +104,12 @@ module Geocoder::US
         start = Time.now
         $stderr.print "EXEC: #{params.inspect}\n" if params.any?
       end
-      result = st.execute(*params)
-      columns = result.columns.map {|c| c.to_sym}
       rows = []
-      result.each {|row| rows << Hash[*(columns.zip(row).flatten)]}
+      synchronize do
+        result = st.execute(*params)
+        columns = result.columns.map {|c| c.to_sym}
+        result.each {|row| rows << Hash[*(columns.zip(row).flatten)]}
+      end
       if @debug
         runtime = format("%.3f", Time.now - start)
         $stderr.print "ROWS: #{rows.length} (#{runtime}s)\n"
