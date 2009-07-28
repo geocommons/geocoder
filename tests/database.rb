@@ -25,22 +25,28 @@ class TestDatabase < Test::Unit::TestCase
     return if db.nil?
     assert_kind_of Geocoder::US::Database, db 
   end
+  def test_zip
+    db = get_db
+    return if db.nil?
+    [ {:city=>"Chicago", :zip=>"60601", :state=>"IL", :precision=>:zip,
+       :fips_county=>"17031", :lon=>"-87.68732", :lat=>"41.811929", :score => 0.714},
+      {:city=>"Philadelphia", :zip=>"19019", :state=>"PA", :precision=>:zip,
+       :fips_county=>"42101", :lon=>"-75.11787", :lat=>"40.001811", :score => 0.714}
+    ].each {|record|
+      result = db.geocode(record[:zip])
+      assert_equal result.length, 1
+      record.keys.each {|key| assert_equal record[key], result[0][key]}
+    }
+  end
   def test_place
     db = get_db
     return if db.nil?
-    [
-      {:city=>"Chicago", :zip=>"60601", :state=>"IL", :precision=>:city,
-       :fips_county=>"17031", :lon=>"-87.68732", :lat=>"41.811929"},
-      {:city=>"Philadelphia", :zip=>"19019", :state=>"PA", :precision=>:city,
-       :fips_county=>"42101", :lon=>"-75.11787", :lat=>"40.001811"}
+    [ {:city=>"Chicago", :state=>"IL", :precision=>:city, :fips_county=>"17031", :score => 0.857},
+      {:city=>"Philadelphia", :state=>"PA", :precision=>:city, :fips_county=>"42101", :score => 0.857}
     ].each {|record|
       result = db.geocode(record[:city] + ", " + record[:state])
       assert_equal result.length, 1
-      record.keys.each {|key| assert_equal result[0][key], record[key] }
-      result = db.geocode(record[:zip])
-      assert_equal result.length, 1
-      record[:precision] = :zip
-      record.keys.each {|key| assert_equal result[0][key], record[key] }
+      record.keys.each {|key| assert_equal record[key], result[0][key]}
     }
   end
   def test_sample

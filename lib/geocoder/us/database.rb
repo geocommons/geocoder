@@ -14,7 +14,9 @@ end
 module Geocoder::US
   # Provides an interface to a Geocoder::US database.
   class Database
-    Address_Weight = 3.0
+    Street_Weight = 3.0
+    Number_Weight = 2.0
+    Parity_Weight = 1.25
     City_Weight = 1.0
     @@mutex = Mutex.new
 
@@ -155,7 +157,8 @@ module Geocoder::US
       metaphones = (["metaphone(?,5)"] * tokens.length).join(",")
       sql = "
         SELECT feature.*, levenshtein(?, street) AS street_score
-          FROM feature WHERE street_phone IN (#{metaphones})"
+          FROM feature
+          WHERE street_phone IN (#{metaphones})"
       params = [street] + tokens
       return [sql, params]
     end
@@ -192,7 +195,8 @@ module Geocoder::US
       in_list = placeholders_for fids
       limit = 4 * fids.length
       sql = "
-        SELECT feature_edge.fid, range.* FROM feature_edge, range
+        SELECT feature_edge.fid AS fid, range.*
+          FROM feature_edge, range
           WHERE fid IN (#{in_list})
           AND feature_edge.tlid = range.tlid"
       params = fids.clone
@@ -322,7 +326,7 @@ module Geocoder::US
       candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?
-        candidates = more_features_by_street_and_zip street[0], address.street_parts, zips
+        candidates = more_features_by_street_and_zip street, address.street_parts, zips
       end
 
       merge_rows! candidates, places, :zip
@@ -362,6 +366,7 @@ module Geocoder::US
       edge_ids = unique_values candidates, :tlid
       records  = edges edge_ids
       merge_rows! candidates, records, :tlid
+      candidates.reject! {|record| record[:tlid].nil?}
       edge_ids
     end
 
@@ -387,39 +392,49 @@ module Geocoder::US
     #   perfect match.
     def score_candidates! (address, candidates)
       for candidate in candidates
+        candidate[:components] = {}
         compare = [:prenum, :state, :zip]
-        denominator = 1.0 + Address_Weight + City_Weight
+        denominator = compare.length + Street_Weight + City_Weight
 
-        score = (1.0 - candidate[:street_score].to_f) * Address_Weight
-        score += (1.0 - candidate[:city_score].to_f) * City_Weight
+        street_score = (1.0 - candidate[:street_score].to_f) * Street_Weight
+        candidate[:components][:street] = street_score
+        city_score   = (1.0 - candidate[:city_score].to_f) * City_Weight
+        candidate[:components][:city] = city_score
+        score = street_score + city_score
+
         compare.each {|key|
-          src  = address.send(key); src = src.downcase if src
-          dest = candidate[key]; dest = dest.downcase if dest
-          score += 1.0/compare.length if src == dest
+          src  = address.send(key); src = src ? src.downcase : ""
+          dest = candidate[key]; dest = dest ? dest.downcase : ""
+          item_score = (src == dest) ? 1 : 0
+          candidate[:components][key] = item_score
+          score += item_score
         }
 
         if address.number and address.number.any?
-          subscore = 0.0
+          parity = subscore = 0.0
           fromhn, tohn, assigned, hn = [
               candidate[:fromhn], 
               candidate[:tohn], 
               candidate[:number], 
               address.number].map {|s|s.to_i}
           if candidate[:precision] == :range
-            subscore += 1
-          else
-            subscore += 1.0/(assigned - hn).abs
+            subscore += Number_Weight
+          elsif assigned > 0
+            # only credit number subscore if assigned
+            subscore += Number_Weight/(assigned - hn).abs.to_f
           end
+          candidate[:components][:number] = subscore
           if hn > 0 and assigned > 0
             # only credit parity if a number was given *and* assigned
-            subscore += 0.5 if fromhn % 2 == hn % 2
-            subscore += 0.5 if tohn % 2 == hn % 2
+            parity += Parity_Weight/2.0 if fromhn % 2 == hn % 2
+            parity += Parity_Weight/2.0 if tohn % 2 == hn % 2
           end
-          candidate[:number_score] = subscore
-          score += subscore
-          denominator += 2
+          candidate[:components][:parity] = parity
+          score += subscore + parity
+          denominator += Number_Weight + Parity_Weight
         end
-        candidate[:raw_score] = score.to_f
+        candidate[:components][:total] = score.to_f
+        candidate[:components][:denominator] = denominator
         candidate[:score] = score.to_f / denominator
       end
     end
@@ -529,10 +544,11 @@ module Geocoder::US
       record[:score] = format("%.3f", record[:score]).to_f \
         unless record[:score].nil?
       record.keys.each {|k| record[k] = "" if record[k].nil? } # clean up nils
+      record.delete :components unless @debug
       record.delete_if {|k,v| k.is_a? Fixnum or
           [:geometry, :side, :tlid, :fid, :fid1, :fid2, :street_phone,
-           :city_phone, :fromhn, :tohn, :paflag, :flipped,
-           :priority, :fips_class, :fips_place, :status].include? k}
+           :city_phone, :fromhn, :tohn, :paflag, :flipped, :street_score,
+           :city_score, :priority, :fips_class, :fips_place, :status].include? k}
     end
 
     def best_places (address, places, canonicalize=false)
@@ -604,10 +620,16 @@ module Geocoder::US
 
       score_candidates! address, candidates
       best_candidates! candidates 
-
+    
+      #candidates.sort {|a,b| b[:score] <=> a[:score]}.each {|candidate|
       add_ranges! address, candidates
       score_candidates! address, candidates
+      #pp candidates.sort {|a,b| b[:score] <=> a[:score]}
       best_candidates! candidates 
+
+      # sometimes multiple fids match the same tlid
+      by_tlid = rows_to_h candidates, :tlid
+      candidates = by_tlid.values.map {|records| records[0]}
 
       # if no number is assigned in the query, only return one
       # result for each street/zip combo

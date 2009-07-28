@@ -86,7 +86,7 @@ module BootStraps
       end 
       
       def boot!
-        require File.join(@@config.root, 'config', 'environment.rb')
+        require File.join(@@config.root, 'config', 'geoenvironment.rb')
         require_libs
       end
 

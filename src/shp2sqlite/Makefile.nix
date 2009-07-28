@@ -10,7 +10,7 @@
 # *
 # **********************************************************************
 
-CC=gcc
+
 CFLAGS=-g -O2  -fPIC -DPIC  -Wall -Wmissing-prototypes
 
 # Filenames with extension as determined by the OS

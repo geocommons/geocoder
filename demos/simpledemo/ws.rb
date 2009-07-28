@@ -5,12 +5,10 @@ require 'fastercsv'
 require 'json'
 
 set :port, 8080
-
+@@db = Geocoder::US::Database.new("/fortiusone/geocoder/geocoder.db")
 get '/' do
   unless params[:address].nil?
-    db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
-	#, "/home/sderle/geocoder/lib/geocoder/us/sqlite3.so")
-    @records = db.geocode params[:address]
+    @records = @@db.geocode params[:address]
   end
 
   case params[:format]
@@ -25,7 +23,6 @@ end
 
 require 'open-uri'
 get '/link.:format' do 
-  db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
   if(params.include?(:url))
 	csv_file = params[:url]
   else
@@ -37,7 +34,7 @@ end
   @records = csv.collect do |record|
     next if record == headers
     begin
-      (db.geocode record[1]).first
+      (@@db.geocode record[1]).first
     rescue Exception => e
       puts e.message
       next
@@ -56,38 +53,31 @@ end
 
 
 post '/batch' do 
-  if params.include?(:uploaded_csv)
-  FileUtils.mkdir_p('uploads/')
-  FileUtils.mv(params[:uploaded_csv][:tempfile].path, "uploads/#{params[:uploaded_csv][:filename]}")  
-  csv_file = open("uploads/#{params[:uploaded_csv][:filename]}")
-  @filename = params[:uploaded_csv][:filename].gsub(/\.csv/,"")
-  csv = FasterCSV.parse(csv_file)
-  else 
-	csv_file = request.env["rack.input"].read
-  	csv = FasterCSV.parse(csv_file, :row_sep => "*", :col_sep => "|")
-  end
-  db = Geocoder::US::Database.new("/mnt/tiger2008/geocoder.db")
+  csv_file = request.env["rack.input"].read
+  csv = FasterCSV.parse(csv_file, :row_sep => "*", :col_sep => "|")
   headers = csv[0]
-  
   @records = csv.collect do |record|
-    next if record == headers
+  next if record == headers
     begin
-	puts record[1]
-      (db.geocode record[1]).first.merge(headers[0] => record[0])
+      (@@db.geocode record[1]).first.merge(headers[0] => record[0])
     rescue Exception => e
       puts e.message
-      next
+    next
     end
-  end.compact
+     end.compact
   case params[:format]
-  when /atom|xml/
+  when /xml/
     builder :index
+  when /atom/
+    builder :atom  
   when /json/
     @records.to_json
   else
     erb :index
   end
-  
 end
+
+  
+
 
 
