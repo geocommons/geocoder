@@ -54,6 +54,17 @@ module Geocoder::US
         helper = File.join(File.dirname(__FILE__), helper)
       end
       synchronize do
+        @db.create_function("metaphone", 2, :text) do |func, string, len|
+          string = string.gsub(/\W/o, "")
+          if string =~ /^(\d+)/o
+            mph = $&
+          elif string =~ /^([wy])$/o
+            mph = $&
+          else
+            mph = Text::Metaphone.metaphone string
+          end
+          func.set_value mph[0...len]
+        end
         @db.enable_load_extension(1)
         @db.load_extension(helper)
         @db.enable_load_extension(0)
