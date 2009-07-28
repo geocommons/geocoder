@@ -3,6 +3,8 @@
 # include <string.h>
 # include <assert.h>
 
+# include "extension.h"
+
 static SQLITE_EXTENSION_INIT1;
 
 static void
@@ -22,6 +24,20 @@ sqlite3_metaphone (sqlite3_context *context, int argc, sqlite3_value **argv) {
     output = sqlite3_malloc((max_phones+1)*sizeof(char));
     len = metaphone(input, output, max_phones); 
     sqlite3_result_text(context, output, len, sqlite3_free);
+}
+
+static void
+sqlite3_levenshtein (sqlite3_context *context, int argc, sqlite3_value **argv) {
+    const unsigned char *s1 = sqlite3_value_text(argv[0]),
+                        *s2 = sqlite3_value_text(argv[1]);
+    double dist;
+    if (sqlite3_value_type(argv[0]) == SQLITE_NULL ||
+        sqlite3_value_type(argv[1]) == SQLITE_NULL) {
+        sqlite3_result_null(context);
+        return;
+    }
+    dist = levenshtein_distance(s1, s2);
+    sqlite3_result_double(context, dist);
 }
 
 static void
@@ -88,6 +104,8 @@ int sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
                             NULL, sqlite3_metaphone, NULL, NULL);
     sqlite3_create_function(db, "metaphone", 2, SQLITE_ANY,
                             NULL, sqlite3_metaphone, NULL, NULL);
+    sqlite3_create_function(db, "levenshtein", 2, SQLITE_ANY,
+                            NULL, sqlite3_levenshtein, NULL, NULL);
     sqlite3_create_function(db, "compress_wkb_line", 1, SQLITE_ANY,
                             NULL, sqlite3_compress_wkb_line, NULL, NULL);
     sqlite3_create_function(db, "uncompress_wkb_line", 1, SQLITE_ANY,

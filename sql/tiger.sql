@@ -7,7 +7,7 @@
 PRAGMA temp_store=MEMORY;
 PRAGMA journal_mode=MEMORY;
 PRAGMA synchronous=OFF;
-PRAGMA cache_size=50000;
+PRAGMA cache_size=500000;
 PRAGMA count_changes=0;
 CREATE TEMPORARY TABLE "tiger_edges" (gid integer PRIMARY KEY,
 "the_geom" blob,
