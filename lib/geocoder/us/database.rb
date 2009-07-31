@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'sqlite3'
 require 'text'
+require 'levenshtein'
 
 require 'set'
 require 'pp'
@@ -56,11 +57,17 @@ module Geocoder::US
         helper = File.join(File.dirname(__FILE__), helper)
       end
       synchronize do
+        @db.create_function("levenshtein", 2, :float) do |func, word1, word2|
+          [word1, word2].each {|w| w = w.to_s.gsub(/\W/o, "").downcase}
+          dist = Levenshtein.distance(word1, word2)
+          result = dist.to_f / [word1.length, word2.length].max
+          func.set_result result 
+        end
         @db.create_function("metaphone", 2, :text) do |func, string, len|
           string = string.gsub(/\W/o, "")
           if string =~ /^(\d+)/o
             mph = $&
-          elif string =~ /^([wy])$/o
+          elif string =~ /^([wy])$/io
             mph = $&
           else
             mph = Text::Metaphone.metaphone string
