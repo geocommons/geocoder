@@ -9,8 +9,7 @@ PRAGMA journal_mode=MEMORY;
 PRAGMA synchronous=OFF;
 PRAGMA cache_size=500000;
 PRAGMA count_changes=0;
-CREATE TEMPORARY TABLE "tiger_edges" (gid integer PRIMARY KEY,
-"the_geom" blob,
+CREATE TEMPORARY TABLE "tiger_edges" (
 "statefp" varchar(2),
 "countyfp" varchar(3),
 "tlid" int8,
@@ -41,9 +40,11 @@ CREATE TEMPORARY TABLE "tiger_edges" (gid integer PRIMARY KEY,
 "offsetl" varchar(1),
 "offsetr" varchar(1),
 "tnidf" int8,
-"tnidt" int8);
+"tnidt" int8,
+"the_geom" blob
+);
 -- SELECT AddGeometryColumn('','edges','the_geom','-1','MULTILINESTRING',2);
-CREATE TEMPORARY TABLE "tiger_featnames" (gid integer PRIMARY KEY,
+CREATE TEMPORARY TABLE "tiger_featnames" (
 "tlid" int8,
 "fullname" varchar(100),
 "name" varchar(100),
@@ -62,7 +63,7 @@ CREATE TEMPORARY TABLE "tiger_featnames" (gid integer PRIMARY KEY,
 "linearid" varchar(22),
 "mtfcc" varchar(5),
 "paflag" varchar(1));
-CREATE TEMPORARY TABLE "tiger_addr" (gid integer PRIMARY KEY,
+CREATE TEMPORARY TABLE "tiger_addr" (
 "tlid" int8,
 "fromhn" varchar(12),
 "tohn" varchar(12),

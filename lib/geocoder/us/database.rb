@@ -29,10 +29,11 @@ module Geocoder::US
     # values will trade memory for speed in long-running processes.
     def initialize (filename, options = {})
       defaults = {:debug => false, :cache_size => 50000,
-                  :helper => "sqlite3.so", :threadsafe => false}
+                  :helper => "sqlite3.so", :threadsafe => false,
+                  :create => false}
       options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
-        unless File.exists? filename
+        unless options[:create] or File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
       @debug = options[:debug]
@@ -57,13 +58,13 @@ module Geocoder::US
         helper = File.join(File.dirname(__FILE__), helper)
       end
       synchronize do
-        @db.create_function("levenshtein", 2, :float) do |func, word1, word2|
+        @db.create_function("levenshtein", 2) do |func, word1, word2|
           [word1, word2].each {|w| w = w.to_s.gsub(/\W/o, "").downcase}
           dist = Levenshtein.distance(word1, word2)
           result = dist.to_f / [word1.length, word2.length].max
           func.set_result result 
         end
-        @db.create_function("metaphone", 2, :text) do |func, string, len|
+        @db.create_function("metaphone", 2) do |func, string, len|
           test = string.to_s.gsub(/\W/o, "")
           if test =~ /^(\d+)/o
             mph = $1
@@ -74,9 +75,17 @@ module Geocoder::US
           end
           func.result = mph[0...len.to_i]
         end
-        @db.enable_load_extension(1)
-        @db.load_extension(helper)
-        @db.enable_load_extension(0)
+        @db.create_function("nondigit_prefix", 1) do |func, string|
+          string =~ /^(.*\D)?(\d+)$/o
+          func.result = ($1 || "")
+        end
+        @db.create_function("digit_suffix", 1) do |func, string|
+          string =~ /^(.*\D)?(\d+)$/o
+          func.result = ($2 || "")
+        end
+        #@db.enable_load_extension(1)
+        #@db.load_extension(helper)
+        #@db.enable_load_extension(0)
         @db.cache_size = cache_size
         @db.temp_store = "memory"
         @db.synchronous = "off"
