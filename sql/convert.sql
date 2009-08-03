@@ -71,3 +71,10 @@ INSERT INTO range
            nondigit_prefix(fromhn), zip, side
     FROM tiger_addr;
 END;
+
+DROP TABLE feature_bin;
+DROP TABLE linezip;
+DROP TABLE tiger_addr;
+DROP TABLE tiger_featnames;
+DROP TABLE tiger_edges;
+

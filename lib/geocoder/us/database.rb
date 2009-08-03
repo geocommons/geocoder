@@ -54,14 +54,13 @@ module Geocoder::US
     # Load the SQLite extension and tune the database settings.
     # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
     def tune (helper, cache_size)
-      if File.expand_path(helper) != helper
-        helper = File.join(File.dirname(__FILE__), helper)
-      end
       synchronize do
         @db.create_function("levenshtein", 2) do |func, word1, word2|
-          [word1, word2].each {|w| w = w.to_s.gsub(/\W/o, "").downcase}
-          dist = Levenshtein.distance(word1, word2)
-          result = dist.to_f / [word1.length, word2.length].max
+          test1, test2 = [word1, word2].map {|w|
+            w.to_s.gsub(/\W/o, "").downcase
+          }
+          dist = Levenshtein.distance(test1, test2)
+          result = dist.to_f / [test1.length, test2.length].max
           func.set_result result 
         end
         @db.create_function("metaphone", 2) do |func, string, len|
@@ -76,11 +75,11 @@ module Geocoder::US
           func.result = mph[0...len.to_i]
         end
         @db.create_function("nondigit_prefix", 1) do |func, string|
-          string =~ /^(.*\D)?(\d+)$/o
+          string.to_s =~ /^(.*\D)?(\d+)$/o
           func.result = ($1 || "")
         end
         @db.create_function("digit_suffix", 1) do |func, string|
-          string =~ /^(.*\D)?(\d+)$/o
+          string.to_s =~ /^(.*\D)?(\d+)$/o
           func.result = ($2 || "")
         end
         #@db.enable_load_extension(1)
@@ -511,6 +510,7 @@ module Geocoder::US
     # Find an interpolated point along a list of linestring vertices
     # proportional to the given fractional distance along the line.
     def interpolate (points, fraction)
+      $stderr.print "POINTS: #{points.inspect}" if @debug
       return points[0] if fraction == 0.0 
       return points[-1] if fraction == 1.0 
       total = 0.0
