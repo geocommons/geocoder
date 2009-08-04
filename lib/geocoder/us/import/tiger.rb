@@ -177,6 +177,10 @@ class Geocoder::US::Import < Geocoder::US::Database
 
   def post_create
   end
+
+  def create_index
+    execute_script "index.sql"
+  end
 end
 
 class Geocoder::US::Import::TIGER < Geocoder::US::Import
@@ -191,7 +195,3 @@ class Geocoder::US::Import::TIGER < Geocoder::US::Import
   end
 end
 
-db = Geocoder::US::Import::TIGER.new(ARGV[0], :sql => "sql")
-ARGV[1..ARGV.length].each do |path|
-  db.import_tree path
-end
