@@ -47,14 +47,14 @@ class Geocoder::US::Import < Geocoder::US::Database
 
   def load_features (file)
     dataset = GeoRuby::Shp4r::ShpFile.open(file)
-    fields  = dataset.fields
+    fields  = dataset.fields.map {|f| f.name}
     dataset.each do |record|
-      attrs = record.data.values_at(fields)
+      attrs = fields.map {|f| record.data[f]}
       geom = record.geometry
       geom = geom.geometries[0] \
         if geom.kind_of? GeoRuby::SimpleFeatures::GeometryCollection
-      points = geom.points.map {|x| (x*1_000_000).to_i}
-      coords = points.pack("V*")
+      points = geom.points.map {|pt| [pt.x, pt.y].map {|i| (i*1000000).to_i}}
+      coords = points.flatten.pack("V*")
       yield attrs, coords
     end
   end
@@ -72,6 +72,17 @@ class Geocoder::US::Import < Geocoder::US::Database
     load_features(file) do |attrs, geom|
       attrs << SQLite3::Blob.new(geom) if geom
       insert_data st, table, attrs
+    end
+  end
+
+  def insert_dbf (file, table)
+    st = nil
+    GeoRuby::Shp4r::Dbf::Reader.open(file) do |dbf|
+      fields  = dbf.fields.map {|f| f.name}
+      dbf.rows.each do |record|
+        attrs = fields.map {|f| record[f]}
+        insert_data st, table, attrs
+      end
     end
   end
 
@@ -111,10 +122,13 @@ class Geocoder::US::Import < Geocoder::US::Database
       unpack_zip zipfile, tmpdir
       basename = File.join(tmpdir, File.basename(zipfile))[0..-5]
       shpfile = basename + ".shp"
-      shpfile = basename + ".dbf" unless File.exists? shpfile
+      dbffile = basename + ".dbf"
       if File.exists? shpfile
         log "#{table} "
         insert_shapefile shpfile, table
+      elsif File.exists? dbffile
+        log "#{table} "
+        insert_dbf dbffile, table
       else
         log "\nNOT FOUND: #{shpfile}\n"
       end

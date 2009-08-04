@@ -7,7 +7,7 @@ class Geocoder::US::Import::TIGER < Geocoder::US::Import
   def post_create
     log "importing places"
     @db.transaction do
-      insert_csv File.join(@sqlpath, "place.csv"), "place"
+    #  insert_csv File.join(@sqlpath, "place.csv"), "place"
     end
   end
 end

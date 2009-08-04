@@ -8,4 +8,4 @@ ARGV[1..ARGV.length].each do |path|
   db.import_tree path
 end
 db.log "creating index"
-db.create_index
+#db.create_index
