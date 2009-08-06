@@ -5,7 +5,8 @@ module Sinatra
   module GeocodeWrap
     attr_accessor :db
     def self.registered(app)
-       @@db = Geocoder::US::Database.new("/opt/tiger/geocoder.db")
+      options = {:cache_size => 100000}
+       @@db = Geocoder::US::Database.new("/opt/tiger/geocoder.db", options)
        app.get '/' do
      	   unless params[:address].nil?
            begin
