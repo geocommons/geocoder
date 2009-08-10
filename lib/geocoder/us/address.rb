@@ -25,7 +25,7 @@ module Geocoder::US
    
     # Takes an address or place name string as its sole argument.
     def initialize (text)
-      raise ArgumentError, "no text provided" unless text and text.any?
+      raise ArgumentError, "no text provided" unless text and !text.empty?
       @text = clean text
       parse
     end
@@ -106,7 +106,7 @@ module Geocoder::US
       # FIXME: PO Box should geocode to ZIP
 
       @street = text.scan(Match[:street])
-      if @street.any?
+      if !@street.empty?
         @street.map! {|s|s.strip}
         add = @street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
         @street |= add
@@ -124,7 +124,7 @@ module Geocoder::US
       @street << full_state if @street.empty? and @state.downcase != full_state.downcase      
  
       @city = text.scan(Match[:city])
-      if @city.any?
+      if !@city.empty?
         @city = [@city[-1].strip]
         add = @city.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}} 
         @city |= add
@@ -167,7 +167,7 @@ module Geocoder::US
         s
       }
       good_strings.reject! {|s| s.empty?}
-      strings = good_strings if good_strings.any? {|s| not Std_Abbr.key?(s) and not Name_Abbr.key?(s)}
+      strings = good_strings if !good_strings.empty? {|s| not Std_Abbr.key?(s) and not Name_Abbr.key?(s)}
 
       # Try a simpler case of adding the @number in case everything is an abbr.
       strings += [@number] if strings.all? {|s| Std_Abbr.key? s or Name_Abbr.key? s}
@@ -185,7 +185,7 @@ module Geocoder::US
       # NOTE: Is this a micro-optimization that has edge cases that will break?
       # Answer: Yes, it breaks on "Prairie"
       good_strings = strings.reject {|s| Std_Abbr.key? s}
-      strings = good_strings if good_strings.any?
+      strings = good_strings if !good_strings.empty?
       strings.uniq
     end
 
@@ -193,7 +193,7 @@ module Geocoder::US
       # NOTE: This will still fail on: 100 Broome St, 33333 (if 33333 is
       # Broome, MT or what)
       match = Regexp.new('\s*\b(?:' + strings.join("|") + ')\b\s*$', Regexp::IGNORECASE)
-      @street = @street.map {|string| string.gsub(match, '')}.select {|s|s.any?}
+      @street = @street.map {|string| string.gsub(match, '')}.select {|s|!s.empty?}
     end
 
     def intersection?

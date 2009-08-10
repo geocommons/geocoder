@@ -14,7 +14,7 @@ else
     FasterCSV.foreach(ARGV[0], {:headers => true}) do |row|
       result = db.geocode(row[0])
       count  = result.map{|a|[a[:lat], a[:lon]]}.to_set.length
-      if result.any?
+      if !result.empty?
         row.headers[1..13].each_with_index {|f,i|
           if result[0][f.to_sym] != row[i+1]
             print "#{row[0]} !#{f} -> #{result[0][f]} != #{row[i+1]}\n"

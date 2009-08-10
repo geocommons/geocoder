@@ -8,7 +8,7 @@ Base = File.dirname(__FILE__)
 
 module Geocoder::US
   Database_File = (
-    (ARGV[0] and ARGV[0].any?) ? ARGV[0] : "/mnt/tiger2008/geocoder.db")
+    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "/mnt/tiger2008/geocoder.db")
 end
 
 class TestDatabase < Test::Unit::TestCase

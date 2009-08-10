@@ -128,7 +128,7 @@ module Geocoder::US
     def execute_statement (st, *params)
       if @debug
         start = Time.now
-        $stderr.print "EXEC: #{params.inspect}\n" if params.any?
+        $stderr.print "EXEC: #{params.inspect}\n" if !params.empty?
       end
       rows = []
       synchronize do
@@ -196,7 +196,7 @@ module Geocoder::US
     # the search area.
     def more_features_by_street_and_zip (street, tokens, zips)
       sql, params = features_by_street(street, tokens)
-      if zips.any?
+      if !zips.empty?
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
         sql += " AND (#{like_list})"
@@ -328,7 +328,7 @@ module Geocoder::US
       candidates = []
 
       city = address.city.sort {|a,b|a.length <=> b.length}[0]
-      places = places_by_zip city, address.zip if address.zip.any?
+      places = places_by_zip city, address.zip if !address.zip.empty?
       places = places_by_city city, address.city_parts, address.state if places.empty?
 
       return [] if places.empty?
@@ -372,7 +372,7 @@ module Geocoder::US
       number = address.number.to_i
       fids   = unique_values candidates, :fid
       ranges = ranges_by_feature fids, number, address.prenum
-      ranges = ranges_by_feature fids, number, nil unless ranges.any?
+      ranges = ranges_by_feature fids, number, nil unless !ranges.empty?
       merge_rows! candidates, ranges, :fid
       assign_number! number, candidates
     end
@@ -425,7 +425,7 @@ module Geocoder::US
           score += item_score
         }
 
-        if address.number and address.number.any?
+        if address.number and !address.number.empty?
           parity = subscore = 0.0
           fromhn, tohn, assigned, hn = [
               candidate[:fromhn], 
@@ -568,7 +568,7 @@ module Geocoder::US
     end
 
     def best_places (address, places, canonicalize=false)
-      return [] unless places.any?
+      return [] unless !places.empty?
       score_candidates! address, places
       best_candidates! places 
       canonicalize_places! places if canonicalize
@@ -590,7 +590,7 @@ module Geocoder::US
     # place name for the given city, state, or ZIP.
     def geocode_place (address, canonicalize=false)
       places = []
-      places = places_by_zip address.text, address.zip if address.zip.any?
+      places = places_by_zip address.text, address.zip if !address.zip.empty?
       places = places_by_city address.text, address.city_parts, address.state if places.empty?
       best_places address, places, canonicalize
     end
@@ -649,7 +649,7 @@ module Geocoder::US
 
       # if no number is assigned in the query, only return one
       # result for each street/zip combo
-      if address.number.any?
+      if !address.number.empty?
         extend_ranges! candidates
       else
         by_street = rows_to_h candidates, :street, :zip
@@ -694,10 +694,10 @@ module Geocoder::US
       return [] if address.city.empty? and address.zip.empty?
       results = []
       start_time = Time.now if @debug
-      if address.intersection? and address.street.any? and address.number.empty?
+      if address.intersection? and !address.street.empty? and address.number.empty?
         results = geocode_intersection address, canonical_place
       end
-      if results.empty? and address.street.any?
+      if results.empty? and !address.street.empty?
         results = geocode_address address, canonical_place
       end
       if results.empty?
