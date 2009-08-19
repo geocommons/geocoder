@@ -11,7 +11,11 @@ module Sinatra
      	   unless params[:address].nil?
            begin
              @records = @@db.geocode params[:address]
+             geo_log = GeocoderLog.new(:geocodes => 1, :failed => 0, :geocoded_at => DateTime.now)
+             geo_log.save
    	       rescue Exception => e
+   	         geo_log =  GeocoderLog.new(:geocodes => 1, :failed => 1, :geocoded_at => DateTime.now)
+   	         geo_log.save
    	         puts e.message
    	       end
    	      end
@@ -29,6 +33,8 @@ module Sinatra
         end
        
        app.post '/batch' do
+         failed_codes = 0
+         total_codes = 0
          puts Time.now
        	if params[:uploaded_csv].nil?
           csv_file = request.env["rack.input"].read
@@ -43,19 +49,24 @@ module Sinatra
        	  headers = csv[0]
        	 
        	  @records = csv.collect do |record|
+       	    total_codes += 1
        	  next if record == headers
             begin
        	      result = @@db.geocode record[1]
        	      if result.empty?
-       	         result[0] = {:lon => nil, :lat => nil}   
+       	         result[0] = {:lon => nil, :lat => nil, :precision => 'unmatched', :score => 0}   
+       	         failed_codes += 1 
        	      end
        	      result.first.merge(headers[0] => record[0])
             rescue Exception => e
+              failed_codes += 1 
        	      puts e.message
               next
        	     end
              end.compact
             puts Time.now
+            geo_log = GeocoderLog.new(:geocodes => total_codes, :failed => failed_codes, :geocoded_at => DateTime.now)
+            geo_log.save
             case params[:format]
        	    when /xml/
        	     builder :index
@@ -63,6 +74,7 @@ module Sinatra
        	     builder :atom
        	    when /json/
        	     @records.to_json
+       	     
        	    else
        	     erb :index
        	    end 

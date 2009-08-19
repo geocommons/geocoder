@@ -25,6 +25,7 @@
   <table>
     <tr>
       <td>Match</td>
+      <td>Precision</td>
       <td>Lat</td>
       <td>Lon</td>
       <td>#</td>
@@ -43,6 +44,7 @@
     <% for record in @records %>
     <tr>
       <td><%= format("%.2f", record[:score]*100) %>%</td>
+      <td><%= record[:precision].to_s %></td>
       <td><%= record[:lat].to_s %></td>
       <td><%= record[:lon].to_s %></td>
       <td><%= record[:prefix] if record[:prefix] %><%= record[:number] %></td>

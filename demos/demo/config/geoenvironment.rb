@@ -5,9 +5,18 @@ BootStraps::Initializer.configure do |config|
   config.vendored = true
   config.default_env = 'production'
   
+  config.gem 'activerecord'
   config.gem 'sinatra'
   config.gem 'fastercsv'
   config.gem 'json'
+  
+  
+  config.db.connect_action do
+    ActiveRecord::Base.establish_connection( :adapter => 'sqlite3', 
+                                             :dbfile =>  File.join(config.root, 'db', "#{config.env}.sqlite3"),
+                                             :wait_timeout => 0.15,
+                                             :timeout => 250)
+  end
 
   config.framework.set :root, config.root
   config.framework.set :environment, config.env

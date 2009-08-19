@@ -22,11 +22,24 @@ module BootStraps
     end
   end
 
+
+  class DataStore 
+    def connect_action(&block)
+      @connect_action = block
+    end
+
+    #TODO raise UndefinedConnectAction
+    def connect
+      @connect_action.call if @connect_action
+    end
+  end
+  
   class Configuration
     attr_accessor :db, :global, :default_env, :vendor_dir, :lib_paths, :framework, :vendored
     attr_reader :gems
 
     def initialize
+      @db = DataStore.new
       @framework = Framework.new
       @gems = {}
       @global = {}
@@ -95,6 +108,7 @@ module BootStraps
       def require_libs
         [
          subdir_expansion('lib'), 
+         subdir_expansion(File.join('app','models')),
          subdir_expansion(File.join('app','ext'))
         ].each do |p|
           require_all(p)
