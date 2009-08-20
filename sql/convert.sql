@@ -28,7 +28,6 @@ CREATE INDEX linezip_tlid ON linezip (tlid);
 
 CREATE TEMPORARY TABLE feature_bin (
   fid INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR(100),
   street VARCHAR(100),
   street_phone VARCHAR(5),
   paflag BOOLEAN,
@@ -40,7 +39,7 @@ UPDATE sqlite_sequence
     WHERE name="feature_bin";
 
 INSERT INTO feature_bin
-    SELECT DISTINCT NULL, name, fullname, metaphone(name,5), paflag, zip
+    SELECT DISTINCT NULL, fullname, metaphone(name,5), paflag, zip
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
@@ -61,7 +60,7 @@ INSERT INTO feature
 --   a simple compression on the WKB geometry (because they're all
 --   linestrings).
 INSERT OR IGNORE INTO edge
-    SELECT l.tlid, compress_wkb_line(the_geom) FROM
+    SELECT l.tlid, the_geom FROM
         (SELECT DISTINCT tlid FROM linezip) AS l, tiger_edges e
         WHERE l.tlid=e.tlid AND fullname <> "" AND fullname IS NOT NULL;
 
@@ -72,3 +71,10 @@ INSERT INTO range
            nondigit_prefix(fromhn), zip, side
     FROM tiger_addr;
 END;
+
+DROP TABLE feature_bin;
+DROP TABLE linezip;
+DROP TABLE tiger_addr;
+DROP TABLE tiger_featnames;
+DROP TABLE tiger_edges;
+
