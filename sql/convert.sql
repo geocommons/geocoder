@@ -28,6 +28,7 @@ CREATE INDEX linezip_tlid ON linezip (tlid);
 
 CREATE TEMPORARY TABLE feature_bin (
   fid INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(100),
   street VARCHAR(100),
   street_phone VARCHAR(5),
   paflag BOOLEAN,
@@ -39,7 +40,7 @@ UPDATE sqlite_sequence
     WHERE name="feature_bin";
 
 INSERT INTO feature_bin
-    SELECT DISTINCT NULL, fullname, metaphone(name,5), paflag, zip
+    SELECT DISTINCT NULL, name, fullname, metaphone(name,5), paflag, zip
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
