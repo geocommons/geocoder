@@ -4,7 +4,6 @@ module GeocomGeocode
   class GeocodeServer < Sinatra::Base
     register Sinatra::GeocodeWrap  
     configure do
-      Straps.db.connect
       Straps.framework.apply_settings!(self)
     end 
   end

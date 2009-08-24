@@ -1,21 +1,21 @@
 require 'rubygems'
 require 'geocoder/us/database'
+require 'logger'
 
 module Sinatra
   module GeocodeWrap
     attr_accessor :db
     def self.registered(app)
       options = {:cache_size => 100000}
-       @@db = Geocoder::US::Database.new("/opt/tiger/geocoder.db", options)
+       @@db = Geocoder::US::Database.new("/Users/katechapman/usgeocode.db", options)
+       stats = Logger.new("geocoderstats.log", 10, 1024000)
        app.get '/' do
      	   unless params[:address].nil?
            begin
              @records = @@db.geocode params[:address]
-             geo_log = GeocoderLog.new(:geocodes => 1, :failed => 0, :geocoded_at => DateTime.now)
-             geo_log.save
+             stats.debug "Geocoded: 1, Failed: 0, Geocoded At: " << DateTime.now.to_s
    	       rescue Exception => e
-   	         geo_log =  GeocoderLog.new(:geocodes => 1, :failed => 1, :geocoded_at => DateTime.now)
-   	         geo_log.save
+   	         stats.debug "Geocoded: 1, Failed: 1, Geocoded At: " << DateTime.now.to_s
    	         puts e.message
    	       end
    	      end
@@ -65,8 +65,7 @@ module Sinatra
        	     end
              end.compact
             puts Time.now
-            geo_log = GeocoderLog.new(:geocodes => total_codes, :failed => failed_codes, :geocoded_at => DateTime.now)
-            geo_log.save
+            stats.debug "Geocoded: " << total_codes.to_s << ", Failed: " << failed_codes.to_s << ",Geocoded At: " << DateTime.now.to_s
             case params[:format]
        	    when /xml/
        	     builder :index

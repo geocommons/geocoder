@@ -39,7 +39,6 @@ module BootStraps
     attr_reader :gems
 
     def initialize
-      @db = DataStore.new
       @framework = Framework.new
       @gems = {}
       @global = {}

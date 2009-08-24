@@ -11,12 +11,7 @@ BootStraps::Initializer.configure do |config|
   config.gem 'json'
   
   
-  config.db.connect_action do
-    ActiveRecord::Base.establish_connection( :adapter => 'sqlite3', 
-                                             :dbfile =>  File.join(config.root, 'db', "#{config.env}.sqlite3"),
-                                             :wait_timeout => 0.15,
-                                             :timeout => 250)
-  end
+
 
   config.framework.set :root, config.root
   config.framework.set :environment, config.env
@@ -24,7 +19,7 @@ BootStraps::Initializer.configure do |config|
   config.framework.set :views, File.join('app','views')
   config.framework.set :server, 'mongrel'
   config.framework.set :static, true
-  config.framework.set :logging, false
+  config.framework.set :logging, true
   config.framework.set :port, 4567
   config.framework.set :lock, false  
 
