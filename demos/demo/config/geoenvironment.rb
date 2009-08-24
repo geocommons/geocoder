@@ -5,7 +5,6 @@ BootStraps::Initializer.configure do |config|
   config.vendored = true
   config.default_env = 'production'
   
-  config.gem 'activerecord'
   config.gem 'sinatra'
   config.gem 'fastercsv'
   config.gem 'json'

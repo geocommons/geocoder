@@ -107,7 +107,6 @@ module BootStraps
       def require_libs
         [
          subdir_expansion('lib'), 
-         subdir_expansion(File.join('app','models')),
          subdir_expansion(File.join('app','ext'))
         ].each do |p|
           require_all(p)
