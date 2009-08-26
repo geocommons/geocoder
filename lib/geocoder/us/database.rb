@@ -694,6 +694,9 @@ module Geocoder::US
       return [] if address.city.empty? and address.zip.empty?
       results = []
       start_time = Time.now if @debug
+      if address.po_box? and !address.zip.empty?
+        results = geocode_place address, canonical_place
+      end
       if address.intersection? and !address.street.empty? and address.number.empty?
         results = geocode_intersection address, canonical_place
       end

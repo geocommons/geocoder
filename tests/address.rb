@@ -58,7 +58,12 @@ class TestAddress < Test::Unit::TestCase
       }
     end
   end
-
+  
+  def test_po_box
+    addr_po = Address.new "PO Box 1111 Herndon VA 20171"
+    assert addr_po.po_box?, true 
+  end
+  
   def test_parse
     addrs = [
       {:text   => "1600 Pennsylvania Av., Washington DC 20050",

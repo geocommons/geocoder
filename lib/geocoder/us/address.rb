@@ -10,6 +10,7 @@ module Geocoder::US
     :state    => Regexp.new(State.regexp.source + "\s*$", Regexp::IGNORECASE),
     :zip      => /(\d{5})(?:-\d{4})?\s*$/o,
     :at       => /\s(at|@|and|&)\s/io,
+    :po_box => /\b[P|p]*(OST|ost)*\.*\s*[O|o|0]*(ffice|FFICE)*\.*\s*[B|b][O|o|0][X|x]\b/
   }
  
   # The Address class takes a US street address or place name and
@@ -196,6 +197,10 @@ module Geocoder::US
       @street = @street.map {|string| string.gsub(match, '')}.select {|s|!s.empty?}
     end
 
+    def po_box?
+      Match[:po_box].match @text
+    end
+    
     def intersection?
       Match[:at].match @text
     end
