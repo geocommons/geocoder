@@ -139,6 +139,12 @@ This process takes 25 minutes on an EC2 instance (8 CPU minutes), but it's a
 process. Basically, this process simply feeds SQL statements to the sqlite3
 utility to construct the indexes on the existing database.
 
+=== Build the metaphones
+
+Run bin/rebuild_metaphones /opt/tiger/geocoder.db
+
+This loads the Ruby Text metaphone function and calculates the metaphones using it.
+
 === Cluster the database tables (optional)
 
 As a final optional step, you can cluster the database tables according to
