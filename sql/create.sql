@@ -19,6 +19,7 @@ CREATE TABLE edge (
 -- 'feature' stores the name(s) and ZIP(s) of each edge.
 CREATE TABLE feature (
   fid INTEGER PRIMARY KEY,
+  name VARCHAR(100),
   street VARCHAR(100),
   street_phone VARCHAR(5),
   paflag BOOLEAN,
