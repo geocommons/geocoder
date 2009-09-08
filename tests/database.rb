@@ -49,6 +49,8 @@ class TestDatabase < Test::Unit::TestCase
       record.keys.each {|key| assert_equal record[key], result[0][key]}
     }
   end
+  
+  
   def test_sample
     db = get_db
     return if db.nil?

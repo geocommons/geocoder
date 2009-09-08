@@ -1,11 +1,59 @@
-#!/usr/bin/ruby
+#!/bin/bash
 
-require 'geocoder/us/import/tiger'
+TMP="/tmp/tiger-import.$$"
+SHPS="edges"
+DBFS="featnames addr"
+BASE=$(dirname $0)
+PATH=$PATH:$BASE
+SQL="$BASE/../sql"
+HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
+DATABASE=$1
+shift
 
-base = File.join(File.dirname(__FILE__), "..", "sql")
-db = Geocoder::US::Import::TIGER.new(ARGV[0], :sql => base)
-ARGV[1..ARGV.length].each do |path|
-  db.import_tree path
-end
-db.log "creating index"
-#db.create_index
+mkdir -p $TMP || exit 1
+
+# Initialize the database if it doesn't exist.
+[ ! -r $DATABASE ] && cat ${SQL}/{create,place}.sql | sqlite3 $DATABASE
+ 
+# Marshal the county directories to import.
+#
+# If no directory was given on the command-line, read a list from STDIN.
+if [ x"$1" = x"" ]; then
+    cat
+else
+    # Otherwise, find all of the contents of each state directory.
+    ls -d $1/[0-9]* | while read state; do
+        ls -d ${state}/[0-9]*
+    done
+fi | while read county; do
+    echo "--- $county"
+    # Unpack the county files into the temp directory.
+    for file in $SHPS $DBFS; do
+	ZIP=$(ls ${county}/*_${file}.zip 2>/dev/null)
+	SHP=$(ls ${county}/*_${file}.* 2>/dev/null)
+	if [ x"$ZIP" != x"" ]; then
+	    unzip -q $ZIP -d $TMP
+	elif [ x"$SHP" != x"" ]; then
+	    ln -s $SHP $TMP
+	fi
+    done
+    # Generate an SQL stream to feed into the sqlite3 binary.
+    # Start by loading the helper libs and initializing the temporary tables
+    #   that will hold the TIGER data before ETL.
+    (echo ".load $HELPER_LIB" && \
+     cat ${SQL}/tiger.sql && \
+     for file in $SHPS; do
+       # Convert each Shapefile into SQL statements.
+       shp2sqlite -aS ${TMP}/*_${file}.shp tiger_${file}
+     done && \
+     for file in $DBFS; do
+       # Convert each DBF into SQL statements likewise.
+       shp2sqlite -an ${TMP}/*_${file}.dbf tiger_${file}
+     done && \
+     cat ${SQL}/convert.sql) | sqlite3 $DATABASE
+    # Finally, do the transform/load phase (convert.sql)
+    # and clean up the temporary files.
+    rm -f $TMP/*
+done 2>&1 | tee import-$$.log
+rm -rf $TMP
+

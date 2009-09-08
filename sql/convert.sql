@@ -6,7 +6,7 @@ CREATE INDEX edges_tlid ON tiger_edges (tlid);
 
 -- generate a summary table matching each edge to one or more ZIPs
 --   for those edges that are streets and have a name
-CREATE TEMPORARY TABLE linezip AS
+CREATE TABLE linezip AS
     SELECT DISTINCT tlid, zip FROM (
         SELECT tlid, zip FROM tiger_addr a
         UNION
@@ -26,8 +26,9 @@ CREATE INDEX linezip_tlid ON linezip (tlid);
 --  name VARCHAR(255),
 --  seq INTEGER);
 
-CREATE TEMPORARY TABLE feature_bin (
+CREATE TABLE feature_bin (
   fid INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(100),
   street VARCHAR(100),
   street_phone VARCHAR(5),
   paflag BOOLEAN,
@@ -39,7 +40,7 @@ UPDATE sqlite_sequence
     WHERE name="feature_bin";
 
 INSERT INTO feature_bin
-    SELECT DISTINCT NULL, fullname, metaphone(name,5), paflag, zip
+    SELECT DISTINCT NULL, name, fullname, 'phone', paflag, zip
         FROM linezip l, tiger_featnames f
         WHERE l.tlid=f.tlid AND name <> "" AND name IS NOT NULL;
 
