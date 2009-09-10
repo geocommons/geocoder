@@ -153,7 +153,7 @@ class Geocoder::US::Import < Geocoder::US::Database
   end
 
   def import_tree (root)
-    if Dir[File.join(root, !tables.values[0])].empty?
+    if !Dir[File.join(root, tables.values[0])].empty?
         import_path root
     else
       Dir[File.join(root, "*")].sort.each do |file|
