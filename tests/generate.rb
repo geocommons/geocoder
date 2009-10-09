@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
 
+require 'test/unit'
 require 'geocoder/us/database'
 require 'fastercsv'
 

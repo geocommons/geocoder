@@ -338,6 +338,7 @@ module Geocoder::US
 
       zips = unique_values places, :zip
       street = address.street.sort {|a,b|a.length <=> b.length}[0]
+      puts "street parts = #{address.street_parts.inspect}"
       candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?
@@ -701,6 +702,7 @@ module Geocoder::US
         results = geocode_intersection address, canonical_place
       end
       if results.empty? and !address.street.empty?
+        puts "geocode with geocode_address"
         results = geocode_address address, canonical_place
       end
       if results.empty?

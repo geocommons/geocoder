@@ -576,7 +576,7 @@ module Geocoder::US
     "Spngs"	=> "Springs",
     "Sq"	=> "Square",
     "Squ"	=> "Square",
-    "St"	=> "Saint",
+#    "St"	=> "Saint",
     "Sta"	=> "Station",
     "Statn"	=> "Station",
     "Ste"	=> "Sainte",
