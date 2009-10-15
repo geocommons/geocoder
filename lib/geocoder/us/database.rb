@@ -142,7 +142,7 @@ module Geocoder::US
       end
       rows
     end
-
+   
     def places_by_zip (city, zip)
       execute("SELECT *, levenshtein(?, city) AS city_score
                FROM place WHERE zip = ?", city, zip)
@@ -152,6 +152,9 @@ module Geocoder::US
     # The metaphone index on the place table is used to match
     # city names.
     def places_by_city (city, tokens, state)
+      if city.nil?
+        city = ""
+      end
       if state.nil? or state.empty?
         and_state = ""
         args = [city] + tokens.clone
@@ -425,7 +428,7 @@ module Geocoder::US
           candidate[:components][key] = item_score
           score += item_score
         }
-
+       
         if address.number and !address.number.empty?
           parity = subscore = 0.0
           fromhn, tohn, assigned, hn = [
@@ -689,8 +692,8 @@ module Geocoder::US
     #   the approximate "goodness" of the candidate match.
     # * The other values in the hash will represent various structured
     #   components of the address and place name.
-    def geocode (string, canonical_place=false)
-      address = Address.new string
+    def geocode (info_to_geocode, canonical_place=false)
+      address = Address.new info_to_geocode
       $stderr.print "ADDR: #{address.inspect}\n" if @debug
       return [] if address.city.empty? and address.zip.empty?
       results = []

@@ -8,12 +8,13 @@ Base = File.dirname(__FILE__)
 
 module Geocoder::US
   Database_File = (
-    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "/mnt/tiger2008/geocoder.db")
+    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "/Users/katechapman/shineygeocoder.db")
 end
 
 class TestDatabase < Test::Unit::TestCase
   def get_db
-    Geocoder::US::Database.new(Geocoder::US::Database_File)
+    Geocoder::US::Database.new(Geocoder::US::Database_File, {:debug => true})
+
   end
   
   def setup
@@ -72,4 +73,20 @@ class TestDatabase < Test::Unit::TestCase
     assert_equal '460', result[0][:number] 
   end
   
+  def test_should_geocode_with_hash
+    result = @db.geocode({:street => "2200 Wilson Blvd", :city => "Arlington", :state => "VA", :postal_code => "22201"}, true)
+    result2 = @db.geocode("2200 Wilson Blvd, Arlington, VA 22201")
+    assert_equal result2,result
+  end
+  
+  def test_should_work_with_partial_hash
+    result = @db.geocode({:street => "2200 Wilson Blvd", :postal_code => "22201"})
+    assert_equal result[0][:precision],:range
+  end
+  
+  def test_weird_edge_case_explosion
+    result = @db.geocode({:street => "1410 Spring Hill Rd", :postal_code => "20221"})
+    result1 = @db.geocode(:street => "402 Valley View Ave", :postal_code => "12345")
+    assert_equal result[0][:precision],:zip    
+  end
 end

@@ -27,8 +27,13 @@ module Geocoder::US
     # Takes an address or place name string as its sole argument.
     def initialize (text)
       raise ArgumentError, "no text provided" unless text and !text.empty?
-      @text = clean text
-      parse
+      if text.class == Hash
+        @text = ""
+        assign_text_to_address text
+      else
+        @text = clean text
+        parse
+      end
     end
 
     # Removes any characters that aren't strictly part of an address string.
@@ -37,7 +42,46 @@ module Geocoder::US
            .gsub(/[^a-z0-9 ,'&@\/-]+/io, "") \
            .gsub(/\s+/o, " ")
     end
-
+   
+   
+    def assign_text_to_address(text)
+      @street = []
+      @prenum = text[:prenum] 
+      @sufnum = text[:sufnum] 
+      @street = text[:street].scan(Match[:street])
+      @number = ""
+      if !@street.nil?
+        if text[:number].nil?
+           @street.map! { |single_street|
+             single_street.downcase!
+             @number = single_street.scan(Match[:number])[0].to_s
+             single_street.sub! @number, ""
+             single_street.sub! /^\s*,?\s*/o, ""
+            }
+       else
+          @number = text[:number].to_s 
+        end
+       @street = expand_streets(@street)
+        street_parts
+      end
+      @city = []
+      if !text[:city].nil?
+        @city.push(text[:city])
+      else
+        @city.push("")
+      end
+      if !text[:state].nil?
+       # @state = []
+       @state = text[:state]
+        if @state.length > 2
+         # full_state = @state.strip # special case: New York
+          @state = State[@state]
+        end
+      end
+      @zip = text[:postal_code] 
+      @plus4 = text[:plus4] 
+    end
+    
     # Expands a token into a list of possible strings based on
     # the Geocoder::US::Name_Abbr constant, and expands numerals and
     # number words into their possible equivalents.
@@ -62,40 +106,55 @@ module Geocoder::US
       end
       strings
     end
-
+    
+    def parse_zip(regex_match, text)
+      idx = text.rindex(regex_match)
+      text[idx...idx+regex_match.length] = ""
+      text.sub! /\s*,?\s*$/o, ""
+      @zip, @plus4 = @zip.map {|s|s.strip} 
+      text
+    end
+    
+    def parse_state(regex_match, text)
+      idx = text.rindex(regex_match)
+      text[idx...idx+regex_match.length] = ""
+      text.sub! /\s*,?\s*$/o, ""
+      @full_state = @state[0].strip # special case: New York
+      @state = State[@full_state]
+      text
+    end
+    
+    def parse_number(regex_match, text)
+      # FIXME: What if this string appears twice?
+      idx = text.index(regex_match)  
+      text[idx...idx+regex_match.length] = ""
+      text.sub! /^\s*,?\s*/o, ""
+      @prenum, @number, @sufnum = @number.map {|s| s and s.strip}
+      text
+    end
+    
     def parse
       text = @text.clone.downcase
 
       @zip = text.scan(Match[:zip])[-1]
       if @zip
-        idx = text.rindex($&)
-        text[idx...idx+$&.length] = ""
-        text.sub! /\s*,?\s*$/o, ""
-        @zip, @plus4 = @zip.map {|s|s.strip}
+        text = parse_zip($&, text) 
       else
         @zip = @plus4 = ""
       end
-
+      
       @state = text.scan(Match[:state])[-1]
       if @state
-        idx = text.rindex($&)
-        text[idx...idx+$&.length] = ""
-        text.sub! /\s*,?\s*$/o, ""
-        full_state = @state[0].strip # special case: New York
-        @state = State[full_state]
+        text = parse_state($&, text)
       else
-        full_state = ""
+        @full_state = ""
         @state = ""
       end
-
+      
       @number = text.scan(Match[:number])[0]
       # FIXME: 230 Fish And Game Rd, Hudson NY 12534
       if @number # and not intersection?
-        # FIXME: What if this string appears twice?
-        idx = text.index($&)
-        text[idx...idx+$&.length] = ""
-        text.sub! /^\s*,?\s*/o, ""
-        @prenum, @number, @sufnum = @number.map {|s| s and s.strip}
+        text = parse_number($&, text)
       else
         @prenum = @number = @sufnum = ""
       end
@@ -105,12 +164,10 @@ module Geocoder::US
       # Sault Ste. Marie
 
       # FIXME: PO Box should geocode to ZIP
-
       @street = text.scan(Match[:street])
       @street = expand_streets(@street)
-      
       # SPECIAL CASE: 1600 Pennsylvania 20050
-      @street << full_state if @street.empty? and @state.downcase != full_state.downcase      
+      @street << @full_state if @street.empty? and @state.downcase != @full_state.downcase      
  
       @city = text.scan(Match[:city])
       if !@city.empty?
@@ -124,7 +181,7 @@ module Geocoder::US
       end
 
       # SPECIAL CASE: no city, but a state with the same name. e.g. "New York"
-      @city << full_state if @state.downcase != full_state.downcase
+      @city << @full_state if @state.downcase != @full_state.downcase
 
       # SPECIAL CASE: if given a single city string, and it's not the
       # same as the street string, remove it from the street parts
@@ -132,8 +189,7 @@ module Geocoder::US
     end
     
     def expand_streets(street)
-      street.clone
-      if !street.empty?
+      if !street.empty? && !street[0].nil?
         street.map! {|s|s.strip}
         add = street.map {|item| item.gsub(Name_Abbr.regexp) {|m| Name_Abbr[m]}}
         street |= add
