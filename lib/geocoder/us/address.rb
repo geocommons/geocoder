@@ -48,7 +48,9 @@ module Geocoder::US
       @street = []
       @prenum = text[:prenum] 
       @sufnum = text[:sufnum] 
-      @street = text[:street].scan(Match[:street])
+      if !text[:street].nil?
+        @street = text[:street].scan(Match[:street])
+      end
       @number = ""
       if !@street.nil?
         if text[:number].nil?
@@ -67,6 +69,7 @@ module Geocoder::US
       @city = []
       if !text[:city].nil?
         @city.push(text[:city])
+        @text = text[:city].to_s
       else
         @city.push("")
       end
@@ -77,9 +80,15 @@ module Geocoder::US
          # full_state = @state.strip # special case: New York
           @state = State[@state]
         end
+      elsif !text[:country].nil?
+        @state = text[:country]
       end
+      
       @zip = text[:postal_code] 
       @plus4 = text[:plus4] 
+      if !@zip
+         @zip = @plus4 = ""
+      end
     end
     
     # Expands a token into a list of possible strings based on

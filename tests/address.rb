@@ -211,4 +211,15 @@ class TestAddress < Test::Unit::TestCase
     
   end
   
+  def test_country_parse
+    addresses = [
+      {:city => "Paris", :country => "FR"},
+      ]
+      
+      for preparsed_address in addresses
+        address_for_geocode = Address.new preparsed_address
+        assert_equal preparsed_address[:country],address_for_geocode.state
+      end
+  end
+  
 end

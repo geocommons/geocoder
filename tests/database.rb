@@ -89,4 +89,23 @@ class TestDatabase < Test::Unit::TestCase
     result1 = @db.geocode(:street => "402 Valley View Ave", :postal_code => "12345")
     assert_equal result[0][:precision],:zip    
   end
+  
+  def test_city_state_together
+    result = @db.geocode({:city => "Richmond", :state => "IN"})  
+    assert_equal result[0][:precision],:city
+  end
+  
+  def test_state_street_together
+    result = @db.geocode({:state => "VA", :street => "14333 Lee Jackson Memorial Hwy"})  
+    #assert_equal result[0][:precision],:range
+  end
+  
+  def test_weird_country_stuff
+     @geonames = Geocoder::US::Database.new( "/Users/katechapman/geonames.db")
+     result = @geonames.geocode({:city => "Kabul", :state => "AF"})
+     assert_equal result[0][:precision],:zip
+    
+  end
+  
+  
 end
