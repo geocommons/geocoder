@@ -1,6 +1,6 @@
 History.txt
 Manifest.txt
-README.txt
+README.rdoc
 Rakefile
 lib/geocoder/us/database.rb
 lib/geocoder/us/numbers.rb
