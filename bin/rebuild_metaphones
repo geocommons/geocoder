@@ -1,0 +1,24 @@
+#!/usr/bin/ruby
+
+require 'rubygems'
+require 'sqlite3'
+require 'text'
+
+    @db = SQLite3::Database.new(ARGV[0])
+    @db.create_function("metaphone", 2) do |func, string, len|
+      test = string.to_s.gsub(/\W/o, "")
+      if test =~ /^(\d+)/o
+        mph = $1
+      elsif test =~ /^([wy])$/io
+        mph = $1
+      else
+        mph = Text::Metaphone.metaphone test
+      end
+      func.result = mph[0...len.to_i]
+    end
+    sql = "update place set city_phone = metaphone(city,5)"
+    
+    @db.execute sql
+    sql = "update feature set street_phone = metaphone(name,5)"
+    @db.execute sql
+    @db.close
