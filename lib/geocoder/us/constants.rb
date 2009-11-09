@@ -665,4 +665,6 @@ module Geocoder::US
     "Wisconsin"		=> "WI",
     "Wyoming"		=> "WY"
   ]
+  
+
 end

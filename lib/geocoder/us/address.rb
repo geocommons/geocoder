@@ -73,9 +73,9 @@ module Geocoder::US
       else
         @city.push("")
       end
-      if !text[:state].nil?
+      if !text[:region].nil?
        # @state = []
-       @state = text[:state]
+       @state = text[:region]
         if @state.length > 2
          # full_state = @state.strip # special case: New York
           @state = State[@state]

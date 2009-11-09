@@ -173,24 +173,24 @@ class TestAddress < Test::Unit::TestCase
   
   def test_skip_parse
     addresses = [
-      {:street => "1233 Main St", :city => "Springfield", :state => "VA", :postal_code => "12345", :final_number => "1233", :parsed_street => "main st"},
-      {:street => "somewhere Ln", :city => "Somewhere", :state => "WI", :postal_code => "22222", :number => "402", :parsed_street => "somewhere ln", :final_number => "402"},
-      {:street => "2200 Wilson Blvd", :city => "Arlington", :state => "VA", :postal_code => "22201", :parsed_street => "wilson blvd", :final_number => "2200"},
+      {:street => "1233 Main St", :city => "Springfield", :region => "VA", :postal_code => "12345", :final_number => "1233", :parsed_street => "main st"},
+      {:street => "somewhere Ln", :city => "Somewhere", :region => "WI", :postal_code => "22222", :number => "402", :parsed_street => "somewhere ln", :final_number => "402"},
+      {:street => "2200 Wilson Blvd", :city => "Arlington", :region => "VA", :postal_code => "22201", :parsed_street => "wilson blvd", :final_number => "2200"},
       ]  
       for preparsed_address in addresses
         address_for_geocode = Address.new preparsed_address 
         assert_equal preparsed_address[:parsed_street],address_for_geocode.street[0]
         assert_equal preparsed_address[:final_number],address_for_geocode.number
         assert_equal preparsed_address[:city],address_for_geocode.city[0]
-        assert_equal preparsed_address[:state],address_for_geocode.state
+        assert_equal preparsed_address[:region],address_for_geocode.state
         assert_equal preparsed_address[:postal_code],address_for_geocode.zip
       end
   end
   
   def test_states_abbreviated_in_skip_parse
     addresses = [
-      {:street => "123 Main St", :city => "Springfield", :state => "Virginia", :postal_code => "12345",:state_abbrev => "VA"},
-      {:street => "402 Somewhere Ln", :city => "Somewhere", :state => "WI", :postal_code => "22222", :state_abbrev => "WI"},
+      {:street => "123 Main St", :city => "Springfield", :region => "Virginia", :postal_code => "12345",:state_abbrev => "VA"},
+      {:street => "402 Somewhere Ln", :city => "Somewhere", :region => "WI", :postal_code => "22222", :state_abbrev => "WI"},
       ]
       for preparsed_address in addresses
         address_for_geocode = Address.new preparsed_address 

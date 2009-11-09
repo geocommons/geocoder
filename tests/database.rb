@@ -74,7 +74,7 @@ class TestDatabase < Test::Unit::TestCase
   end
   
   def test_should_geocode_with_hash
-    result = @db.geocode({:street => "2200 Wilson Blvd", :city => "Arlington", :state => "VA", :postal_code => "22201"}, true)
+    result = @db.geocode({:street => "2200 Wilson Blvd", :city => "Arlington", :region => "VA", :postal_code => "22201"}, true)
     result2 = @db.geocode("2200 Wilson Blvd, Arlington, VA 22201")
     assert_equal result2,result
   end
@@ -96,16 +96,11 @@ class TestDatabase < Test::Unit::TestCase
   end
   
   def test_state_street_together
-    result = @db.geocode({:state => "VA", :street => "14333 Lee Jackson Memorial Hwy"})  
+    result = @db.geocode({:region => "VA", :street => "14333 Lee Jackson Memorial Hwy"})  
     #assert_equal result[0][:precision],:range
   end
   
-  def test_weird_country_stuff
-     @geonames = Geocoder::US::Database.new( "/Users/katechapman/geonames.db")
-     result = @geonames.geocode({:city => "Kabul", :state => "AF"})
-     assert_equal result[0][:precision],:zip
-    
-  end
+ 
   
   
 end
