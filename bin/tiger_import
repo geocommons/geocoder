@@ -41,7 +41,7 @@ fi | while read county; do
     # Start by loading the helper libs and initializing the temporary tables
     #   that will hold the TIGER data before ETL.
     (echo ".load $HELPER_LIB" && \
-     cat ${SQL}/tiger.sql && \
+     cat ${SQL}/setup.sql && \
      for file in $SHPS; do
        # Convert each Shapefile into SQL statements.
        shp2sqlite -aS ${TMP}/*_${file}.shp tiger_${file}
