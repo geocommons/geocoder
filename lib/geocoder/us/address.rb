@@ -82,6 +82,8 @@ module Geocoder::US
         end
       elsif !text[:country].nil?
         @state = text[:country]
+      elsif !text[:state].nil?
+        @state = text[:state]
       end
       
       @zip = text[:postal_code] 
