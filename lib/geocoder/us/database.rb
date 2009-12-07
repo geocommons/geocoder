@@ -145,7 +145,7 @@ module Geocoder::US
    
     def places_by_zip (city, zip)
       execute("SELECT *, levenshtein(?, city) AS city_score
-               FROM place WHERE zip = ?", city, zip)
+               FROM place WHERE zip = ? order by priority desc;", city, zip)
     end
 
     # Query the place table for by city, optional state, and zip.
@@ -164,7 +164,7 @@ module Geocoder::US
       end
       metaphones = metaphone_placeholders_for tokens
       execute("SELECT *, levenshtein(?, city) AS city_score
-                FROM place WHERE city_phone IN (#{metaphones}) #{and_state}", *args)
+                FROM place WHERE city_phone IN (#{metaphones}) #{and_state} order by priority desc;", *args)
     end
 
     # Generate an SQL query and set of parameters against the feature and range
@@ -199,7 +199,8 @@ module Geocoder::US
     # the search area.
     def more_features_by_street_and_zip (street, tokens, zips)
       sql, params = features_by_street(street, tokens)
-      if !zips.empty?
+      if !zips.empty? and !zips[0].nil?
+        puts "zip results 2"
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
         sql += " AND (#{like_list})"
@@ -294,7 +295,7 @@ module Geocoder::US
     # the primary name for a ZIP is not always the "right" one.
     def primary_places (zips)
       in_list = placeholders_for zips
-      sql = "SELECT * FROM place WHERE zip IN (#{in_list}) ORDER BY priority;"
+      sql = "SELECT * FROM place WHERE zip IN (#{in_list}) order by priority desc;"
       execute sql, *zips
     end
 
@@ -333,7 +334,7 @@ module Geocoder::US
       city = address.city.sort {|a,b|a.length <=> b.length}[0]
       places = places_by_zip city, address.zip if !address.zip.empty?
       places = places_by_city city, address.city_parts, address.state if places.empty?
-
+      puts places
       return [] if places.empty?
 
       address.city = unique_values places, :city
@@ -341,7 +342,7 @@ module Geocoder::US
 
       zips = unique_values places, :zip
       street = address.street.sort {|a,b|a.length <=> b.length}[0]
-      puts "street parts = #{address.street_parts.inspect}"
+     # puts "street parts = #{address.street_parts.inspect}"
       candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?
@@ -579,13 +580,22 @@ module Geocoder::US
 
       # uniqify places
       by_name = rows_to_h(places, :city, :state)
-      by_name.values.each {|v| v.sort! {|a,b| a[:zip] <=> b[:zip]}}
+      if !by_name.nil?
+        begin
+          by_name.values.each {|v| 
+             v.sort! {|a,b|
+               a[:zip] <=> b[:zip]
+             }}
+            rescue
+
+            end
       places = by_name.map {|k,v| v[0]}
    
       places.each {|record| clean_record! record}
       places.each {|record|
         record[:precision] = (record[:zip] == address.zip ? :zip : :city)
       }
+      end
       places
     end
 
@@ -594,7 +604,7 @@ module Geocoder::US
     # place name for the given city, state, or ZIP.
     def geocode_place (address, canonicalize=false)
       places = []
-      places = places_by_zip address.text, address.zip if !address.zip.empty?
+      places = places_by_zip address.text, address.zip if !address.zip.empty? or !address.zip.nil?
       places = places_by_city address.text, address.city_parts, address.state if places.empty?
       best_places address, places, canonicalize
     end
@@ -705,7 +715,6 @@ module Geocoder::US
         results = geocode_intersection address, canonical_place
       end
       if results.empty? and !address.street.empty?
-        puts "geocode with geocode_address"
         results = geocode_address address, canonical_place
       end
       if results.empty?
