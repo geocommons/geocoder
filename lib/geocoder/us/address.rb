@@ -27,9 +27,12 @@ module Geocoder::US
     # Takes an address or place name string as its sole argument.
     def initialize (text)
       raise ArgumentError, "no text provided" unless text and !text.empty?
-      if text.class == Hash
+      if text.class == Hash && text[:address].nil?
         @text = ""
         assign_text_to_address text
+      elsif !text[:address].nil?
+        @text = clean text[:address].to_s
+        parse
       else
         @text = clean text
         parse
@@ -91,6 +94,7 @@ module Geocoder::US
       if !@zip
          @zip = @plus4 = ""
       end
+    
     end
     
     # Expands a token into a list of possible strings based on
