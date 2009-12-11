@@ -135,14 +135,15 @@ module Geocoder::US
       synchronize do
         result = st.execute(*params)
         columns = result.columns.map {|c| c.to_sym}
-        result.reverse_each {|row|
+        result.each {|row|
            rows << Hash[*(columns.zip(row).flatten)]}
+        
       end
       if @debug
         runtime = format("%.3f", Time.now - start)
         $stderr.print "ROWS: #{rows.length} (#{runtime}s)\n"
       end
-      rows
+      rows.reverse!
     end
    
     def places_by_zip (city, zip)
@@ -466,7 +467,7 @@ module Geocoder::US
     # top score and prune the remainder from the list.
     def best_candidates! (candidates)
       candidates.sort! {|a,b| b[:score] <=> a[:score]}
-      candidates.reverse_each {|c| print "#{c[:number]} #{c[:state]} #{c[:city]} #{c[:raw_score]} #{c[:number_score]} #{c[:street_score]} #{c[:city_score]}\n" }
+      #candidates.reverse_each {|c| print "#{c[:number]} #{c[:state]} #{c[:city]} #{c[:raw_score]} #{c[:number_score]} #{c[:street_score]} #{c[:city_score]}\n" }
       candidates.delete_if {|record| record[:score] < candidates[0][:score]}
     end
 
@@ -707,8 +708,6 @@ module Geocoder::US
     #   components of the address and place name.
     def geocode (info_to_geocode, canonical_place=false)
       address = Address.new info_to_geocode
-      puts address.state
-      puts "state-----"
       $stderr.print "ADDR: #{address.inspect}\n" if @debug
       return [] if address.city.empty? and address.zip.empty?
       results = []
