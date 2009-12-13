@@ -155,6 +155,7 @@ class TestAddress < Test::Unit::TestCase
        :number => "1400",
        :street => "Ave of the Americas",
        :city   => "New York"},
+
     ]
     for fixture in addrs
       text = fixture.delete(:text)
@@ -175,7 +176,6 @@ class TestAddress < Test::Unit::TestCase
     addresses = [
       {:street => "1233 Main St", :city => "Springfield", :region => "VA", :postal_code => "12345", :final_number => "1233", :parsed_street => "main st"},
       {:street => "somewhere Ln", :city => "Somewhere", :region => "WI", :postal_code => "22222", :number => "402", :parsed_street => "somewhere ln", :final_number => "402"},
-      {:street => "2200 Wilson Blvd", :city => "Arlington", :region => "VA", :postal_code => "22201", :parsed_street => "wilson blvd", :final_number => "2200"},
       ]  
       for preparsed_address in addresses
         address_for_geocode = Address.new preparsed_address 
@@ -197,6 +197,17 @@ class TestAddress < Test::Unit::TestCase
         assert_equal preparsed_address[:state_abbrev],address_for_geocode.state
       end
     
+  end
+  
+  def test_address_hash
+    addresses = [
+      {:address => "Herndon, VA", :place_check => ["herndon"]},
+      {:address => "Arlington, VA", :place_check => ["arlington"]}
+      ]
+      for preparsed_address in addresses
+        address_for_geocode = Address.new preparsed_address 
+        assert_equal preparsed_address[:place_check],address_for_geocode.city
+      end
   end
   
   def test_partial_address
