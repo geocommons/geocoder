@@ -100,12 +100,12 @@ sqlite3_uncompress_wkb_line (sqlite3_context *context,
 int sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
                             const sqlite3_api_routines *pApi) {
     SQLITE_EXTENSION_INIT2(pApi);
-    /*
+    
     sqlite3_create_function(db, "metaphone", 1, SQLITE_ANY,
                             NULL, sqlite3_metaphone, NULL, NULL);
     sqlite3_create_function(db, "metaphone", 2, SQLITE_ANY,
                             NULL, sqlite3_metaphone, NULL, NULL);
-    */
+    
     sqlite3_create_function(db, "levenshtein", 2, SQLITE_ANY,
                             NULL, sqlite3_levenshtein, NULL, NULL);
     sqlite3_create_function(db, "compress_wkb_line", 1, SQLITE_ANY,
