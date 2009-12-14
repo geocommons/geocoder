@@ -27,12 +27,9 @@ module Geocoder::US
     # Takes an address or place name string as its sole argument.
     def initialize (text)
       raise ArgumentError, "no text provided" unless text and !text.empty?
-      if text.class == Hash && text[:address].nil?
+      if text.class == Hash
         @text = ""
         assign_text_to_address text
-      elsif !text[:address].nil?
-        @text = clean text[:address].to_s
-        parse
       else
         @text = clean text
         parse
@@ -48,53 +45,57 @@ module Geocoder::US
    
    
     def assign_text_to_address(text)
-      @street = []
-      @prenum = text[:prenum] 
-      @sufnum = text[:sufnum] 
-      if !text[:street].nil?
-        @street = text[:street].scan(Match[:street])
-      end
-      @number = ""
-      if !@street.nil?
-        if text[:number].nil?
-           @street.map! { |single_street|
-             single_street.downcase!
-             @number = single_street.scan(Match[:number])[0].to_s
-             single_street.sub! @number, ""
-             single_street.sub! /^\s*,?\s*/o, ""
-            }
-       else
-          @number = text[:number].to_s 
-        end
-       @street = expand_streets(@street)
-        street_parts
-      end
-      @city = []
-      if !text[:city].nil?
-        @city.push(text[:city])
-        @text = text[:city].to_s
+      if !text[:address].nil?
+        @text = clean text[:address]
+        parse
       else
-        @city.push("")
-      end
-      if !text[:region].nil?
-       # @state = []
-       @state = text[:region]
-        if @state.length > 2
-         # full_state = @state.strip # special case: New York
-          @state = State[@state]
+        @street = []
+        @prenum = text[:prenum] 
+        @sufnum = text[:sufnum] 
+        if !text[:street].nil?
+          @street = text[:street].scan(Match[:street])
         end
-      elsif !text[:country].nil?
-        @state = text[:country]
-      elsif !text[:state].nil?
-        @state = text[:state]
+        @number = ""
+        if !@street.nil?
+          if text[:number].nil?
+             @street.map! { |single_street|
+               single_street.downcase!
+               @number = single_street.scan(Match[:number])[0].to_s
+               single_street.sub! @number, ""
+               single_street.sub! /^\s*,?\s*/o, ""
+              }
+         else
+            @number = text[:number].to_s 
+          end
+         @street = expand_streets(@street)
+          street_parts
+        end
+        @city = []
+        if !text[:city].nil?
+          @city.push(text[:city])
+          @text = text[:city].to_s
+        else
+          @city.push("")
+        end
+        if !text[:region].nil?
+         # @state = []
+         @state = text[:region]
+          if @state.length > 2
+           # full_state = @state.strip # special case: New York
+            @state = State[@state]
+          end
+        elsif !text[:country].nil?
+          @state = text[:country]
+        elsif !text[:state].nil?
+          @state = text[:state]
+        end
+
+        @zip = text[:postal_code] 
+        @plus4 = text[:plus4] 
+        if !@zip
+           @zip = @plus4 = ""
+        end
       end
-      
-      @zip = text[:postal_code] 
-      @plus4 = text[:plus4] 
-      if !@zip
-         @zip = @plus4 = ""
-      end
-    
     end
     
     # Expands a token into a list of possible strings based on
