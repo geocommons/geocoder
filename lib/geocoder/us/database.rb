@@ -492,10 +492,13 @@ module Geocoder::US
     # compress_wkb_line() function in the SQLite helper extension.
     def unpack_geometry (geom)
       points = []
-      coords = geom.unpack "V*" # little-endian 4-byte long ints
+      if !geom.nil?
+        coords = geom.unpack "V*" # little-endian 4-byte long ints
+      
       # now map them into signed floats
-      coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
-      points << [coords.shift, coords.shift] until coords.empty?
+        coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
+        points << [coords.shift, coords.shift] until coords.empty?
+      end
       points
     end
 
@@ -537,7 +540,7 @@ module Geocoder::US
           return found.map {|x| format("%.6f", x).to_f}
         end
       end
-      raise "Can't happen!"
+     # raise "Can't happen!"
     end
 
     # Find and replace the city, state, and county information
@@ -674,7 +677,6 @@ module Geocoder::US
         candidates = by_street.values.map {|records| records[0]}
         merge_edges! candidates
       end
-
       candidates.map {|record|
         dist = interpolation_distance record
         $stderr.print "DIST: #{dist}\n" if @debug
