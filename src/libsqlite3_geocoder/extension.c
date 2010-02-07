@@ -2,6 +2,7 @@
 # include <stdio.h>
 # include <string.h>
 # include <assert.h>
+# include <math.h>
 
 # include "extension.h"
 
@@ -76,7 +77,7 @@ sqlite3_compress_wkb_line (sqlite3_context *context,
     }
     unsigned long input_len = sqlite3_value_bytes(argv[0]);
     const void *input = sqlite3_value_blob(argv[0]);
-    unsigned long output_len = (input_len-9)/2;
+    unsigned long output_len = ceil((input_len-9)/8.0) * 4;
     unsigned long len = 0;
     void *output = sqlite3_malloc(output_len);
     len = compress_wkb_line(output, input, input_len); 
@@ -92,7 +93,7 @@ sqlite3_uncompress_wkb_line (sqlite3_context *context,
     unsigned long output_len = input_len*2+9;
     unsigned long len = 0;
     void *output = sqlite3_malloc(output_len);
-    len = uncompress_wkb_line(output, input, input_len); 
+    len = uncompress_wkb_line(output, input, input_len);
     assert(len == output_len);
     sqlite3_result_blob(context, output, len, sqlite3_free);
 }
