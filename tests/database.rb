@@ -8,7 +8,7 @@ Base = File.dirname(__FILE__)
 
 module Geocoder::US
   Database_File = (
-    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "/Users/katechapman/shineygeocoder.db")
+    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : nil)
 end
 
 class TestDatabase < Test::Unit::TestCase
@@ -17,14 +17,14 @@ class TestDatabase < Test::Unit::TestCase
 
   end
   
-  def get_international_db
-    Geocoder::US::Database.new("/Users/katechapman/Desktop/geonames1.db", {:debug => true})
-  end
+  # def get_international_db
+  #   Geocoder::US::Database.new("/Users/katechapman/Desktop/geonames1.db", {:debug => true})
+  # end
   
   def setup
     @db = get_db
-    @db_intl = get_international_db
-    assert_not_nil @db_intl
+    #@db_intl = get_international_db
+    #assert_not_nil @db_intl
     assert_not_nil @db
   end
   
@@ -47,16 +47,16 @@ class TestDatabase < Test::Unit::TestCase
      
     end
     
-    def test_international_place
-      return if @db_intl.nil?  
-      [ {:city=>"Paris", :state=>"FR"},
-        {:city=>"Paris", :state=>"FR"}
-      ].each {|record|
-        result = @db_intl.geocode(record)
-        assert_equal result.length, 1
-        record.keys.each {|key| assert_equal record[key], result[0][key]}
-      }
-    end
+    # def test_international_place
+    #  return if @db_intl.nil?  
+    #  [ {:city=>"Paris", :state=>"FR"},
+    #    {:city=>"Paris", :state=>"FR"}
+    #  ].each {|record|
+    #    result = @db_intl.geocode(record)
+    #    assert_equal result.length, 1
+    #    record.keys.each {|key| assert_equal record[key], result[0][key]}
+    #  }
+    # end
       
           def test_place
             return if @db.nil?
@@ -70,17 +70,17 @@ class TestDatabase < Test::Unit::TestCase
           
           end
         
-        def test_international_place
-          return if @db_intl.nil?  
-            [ {:city=>"Kabul", :state=>"AF", :precision=>:city},
-              {:city=>"Paris", :state=>"FR", :precision=>:city}
-            ].each {|record|
-              result = @db_intl.geocode({:city => record[:city] , :state => record[:state]})  
-              puts result
-              assert_equal result.length, 1
-              record.keys.each {|key| assert_equal record[key], result[0][key]}
-            }
-        end
+        # def test_international_place
+        #  return if @db_intl.nil?  
+        #    [ {:city=>"Kabul", :state=>"AF", :precision=>:city},
+        #      {:city=>"Paris", :state=>"FR", :precision=>:city}
+        #    ].each {|record|
+        #      result = @db_intl.geocode({:city => record[:city] , :state => record[:state]})  
+        #      puts result
+        #      assert_equal result.length, 1
+        #      record.keys.each {|key| assert_equal record[key], result[0][key]}
+        #    }
+        # end
         
         def test_sample
            return if @db.nil?
