@@ -49,9 +49,8 @@
 "3555 SOUTHERN HILLS DR, SIOUX CITY IA 51106",3555,Southern Hills Dr,Sioux City,IA,51106,-96.353207,42.448741,1,
 "300 E 3RD ST, NORTH PLATTE NE 69101",300,E 3rd St,North Platte,NE,69101,-100.761028,41.135235,1,
 "115 N WEBB RD, GRAND ISLAND NE 68803",115,N Webb Rd,Grand Island,NE,68803,-98.378432,40.917192,1,
-"415 VALLEY VIEW DR, SCOTTSBLUFF NE 69361",501,Valley View Dr,Scotts Bluff,NE,69361,-103.656078,41.879011,1,find nearest corner
+"415 VALLEY VIEW DR, SCOTTSBLUFF NE 69361",501,Valley View Dr,Scottsbluff,NE,69361,-103.656078,41.879011,1,find nearest corner
 "4018 W Ustick Rd, Meridian ID",4413,W Ustick Rd,Nampa,ID,83687,-116.479463,43.634111,1,street
-"129 E Williams Field Rd, Gilbert AZ 85295",800,E Williams Field Rd,Gilbert,AZ,85295,-111.772768,33.306601,1,street
 "2518 S Pacific Hwy, Medford OR",2499,S Pacific Hwy,Medford,OR,97501,-122.849335,42.301566,1,street
 "1111 River Rd Apt A17, Edgewater NJ 07020",1111,River Rd,Edgewater,NJ,07020,-73.972523,40.832584,1,FIXME: parsing
 "460 West St, Amherst MA 01002-2964",460,West St,Amherst,MA,01002,-72.519936,42.341085,1,address is all abbreviations

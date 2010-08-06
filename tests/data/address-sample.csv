@@ -49,4 +49,4 @@ address,number,predir,prequal,pretyp,street,suftyp,sufqual,sufdir,unittyp,unit,c
 "3555 SOUTHERN HILLS DR, SIOUX CITY IA 51106",3555,,,,"Southern Hills",Dr,,,,,"Sioux City",IA,51106,,,,
 "300 E 3RD ST, NORTH PLATTE NE 69101",300,E,,,3rd,St,,,,,"North Platte",NE,69101,,,,
 "115 N WEBB RD, GRAND ISLAND NE 68803",115,N,,,Webb,Rd,,,,,"Grand Island",NE,68803,,,,
-"415 VALLEY VIEW DR, SCOTTSBLUFF NE 69361",501,,,,"Valley View",Dr,,,,,"Scotts Bluff",NE,69361,,,,"find nearest corner"
+"415 VALLEY VIEW DR, SCOTTSBLUFF NE 69361",501,,,,"Valley View",Dr,,,,,"Scottsbluff",NE,69361,,,,"find nearest corner"
