@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'sqlite3'
-require 'text'
-require 'levenshtein'
+# require 'text'
+# require 'levenshtein'
 
 require 'set'
 require 'pp'
