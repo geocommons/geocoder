@@ -54,37 +54,40 @@ module Geocoder::US
     # Load the SQLite extension and tune the database settings.
     # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
     def tune (helper, cache_size)
+      if File.expand_path(helper) != helper
+        helper = File.join(File.dirname(__FILE__), helper)
+      end
       synchronize do
-        @db.create_function("levenshtein", 2) do |func, word1, word2|
-          test1, test2 = [word1, word2].map {|w|
-            w.to_s.gsub(/\W/o, "").downcase
-          }
-          dist = Levenshtein.distance(test1, test2)
-          result = dist.to_f / [test1.length, test2.length].max
-          func.set_result result 
-        end
-        @db.create_function("metaphone", 2) do |func, string, len|
-          test = string.to_s.gsub(/\W/o, "")
-          if test =~ /^(\d+)/o
-            mph = $1
-          elsif test =~ /^([wy])$/io
-            mph = $1
-          else
-            mph = Text::Metaphone.metaphone test
-          end
-          func.result = mph[0...len.to_i]
-        end
-        @db.create_function("nondigit_prefix", 1) do |func, string|
-          string.to_s =~ /^(.*\D)?(\d+)$/o
-          func.result = ($1 || "")
-        end
-        @db.create_function("digit_suffix", 1) do |func, string|
-          string.to_s =~ /^(.*\D)?(\d+)$/o
-          func.result = ($2 || "")
-        end
-        #@db.enable_load_extension(1)
-        #@db.load_extension(helper)
-        #@db.enable_load_extension(0)
+        # @db.create_function("levenshtein", 2) do |func, word1, word2|
+        #   test1, test2 = [word1, word2].map {|w|
+        #     w.to_s.gsub(/\W/o, "").downcase
+        #   }
+        #   dist = Levenshtein.distance(test1, test2)
+        #   result = dist.to_f / [test1.length, test2.length].max
+        #   func.set_result result 
+        # end
+        # @db.create_function("metaphone", 2) do |func, string, len|
+        #   test = string.to_s.gsub(/\W/o, "")
+        #   if test =~ /^(\d+)/o
+        #     mph = $1
+        #   elsif test =~ /^([wy])$/io
+        #     mph = $1
+        #   else
+        #     mph = Text::Metaphone.metaphone test
+        #   end
+        #   func.result = mph[0...len.to_i]
+        # end
+        # @db.create_function("nondigit_prefix", 1) do |func, string|
+        #   string.to_s =~ /^(.*\D)?(\d+)$/o
+        #   func.result = ($1 || "")
+        # end
+        # @db.create_function("digit_suffix", 1) do |func, string|
+        #   string.to_s =~ /^(.*\D)?(\d+)$/o
+        #   func.result = ($2 || "")
+        # end
+        @db.enable_load_extension(1)
+        @db.load_extension(helper)
+        @db.enable_load_extension(0)
         @db.cache_size = cache_size
         @db.temp_store = "memory"
         @db.synchronous = "off"
@@ -203,7 +206,7 @@ module Geocoder::US
     def more_features_by_street_and_zip (street, tokens, zips)
       sql, params = features_by_street(street, tokens)
       if !zips.empty? and !zips[0].nil?
-        puts "zip results 2"
+        #puts "zip results 2"
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
         sql += " AND (#{like_list})"
