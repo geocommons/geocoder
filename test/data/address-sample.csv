@@ -1,0 +1,52 @@
+address,number,predir,prequal,pretyp,street,suftyp,sufqual,sufdir,unittyp,unit,city,state,zip,lon,lat,count,comment
+"93 NORTH 9TH STREET, BROOKLYN NY 11211",93,N,,,9th,St,,,,,Brooklyn,NY,11211,,,,
+"380 WESTMINSTER ST, PROVIDENCE RI 02903",380,,,,Westminster,St,,,,,Providence,RI,02903,,,,
+"177 MAIN STREET, LITTLETON NH 03561",177,,,,Main,St,,,,,Littleton,NH,03561,,,,
+"202 HARLOW ST, BANGOR ME 04401",202,,,,Harlow,St,,,,,Bangor,ME,04401,,,,
+"46 FRONT STREET, WATERVILLE, ME 04901",46,,,,Front,St,,,,,Waterville,ME,04901,,,,
+"22 SUSSEX ST, HACKENSACK NJ 07601",22,,,,Sussex,St,,,,,Hackensack,NJ,07601,,,,
+"75 OAK STREET, PATCHOGUE NY 11772",75,,,,Oak,St,,,,,Patchogue,NY,11772,,,,
+"1 CLINTON AVE, ALBANY NY 12207",1,,,,Clinton,Ave,,,,,Albany,NY,12207,,,,
+"7242 ROUTE 9, PLATTSBURGH NY 12901",7242,,,US Hwy,9,,,,,,Plattsburgh,NY,12901,,,,
+"520 5TH AVE, MCKEESPORT PA 15132",520,,,,5th,Ave,,,,,McKeesport,PA,15132,,,,
+"122 W 3RD STREET, GREENSBURG PA 15601",122,W,,,3rd,St,,,,,Greensburg,PA,15601,,,,
+"901 UNIVERSITY DR, STATE COLLEGE PA 16801",901,,,,University,Dr,,,,,"State College",PA,16801,,,,
+"240 W 3RD ST, WILLIAMSPORT PA 17701",240,W,,,3rd,St,,,,,Williamsport,PA,17701,,,,
+"41 N 4TH ST, ALLENTOWN PA 18102",41,N,,,4th,St,,,,,Allentown,PA,18102,,,,
+"2221 W. MARKET STREET, POTTSVILLE PA 17901",2221,W,,,Market,St,,,,,Pottsville,PA,17901,,,,
+"337 BRIGHTSEAT ROAD, LANDOVER MD 20785",337,,,,Brightseat,Rd,,,,,Hyattsville,MD,20785,,,,"canonical place"
+"101 CHESAPEAKE BLVD, ELKTON MD 21921",103,,,,Chesapeake,Blvd,,,,,Elkton,MD,21921,,,,"find nearest corner"
+"2875 SABRE ST, VIRGINIA BEACH VA 23452",2809,,,,Sabre,St,,,,,"Virginia Beach",VA,23452,,,,"find nearest corner"
+"324 COMMERCE ROAD, FARMVILLE VA 23901",324,,,,Commerce,St,,,,,Clarksville,VA,23927,,,,"nearby address; might be TIGER omission"
+"1480 EAST MAIN STREET, WYTHEVILLE VA 24382",1480,W,,,Main,St,,,,,Wytheville,VA,24382,,,,"nearby address; TIGER omission"
+"116 N JEFFERSON STREET, ROANOKE VA 24016",116,N,,,Jefferson,St,,,,,Roanoke,VA,24016,,,,
+"50 MCDOWELL STREET, WELCH WV 24801",50,,,,"Mc Dowell",St,,,,,Welch,WV,24801,,,,
+"146 EAST FIRST AVE, WILLIAMSON WV 25661",200,E,,,1st,Ave,,,,,Williamson,WV,25661,,,,"find nearest corner"
+"1925 E MAIN ST, ALBEMARLE NC 28001",1925,E,,,Main,St,,,,,Albemarle,NC,28001,,,,
+"1013 SPRING LANE, SANFORD NC 27330",1013,,,,Spring,Ln,,,,,Sanford,NC,27330,,,,
+"145 ROWAN STREET, FAYETTEVILLE NC 28301",145,,,,Rowan,St,,,,,Fayetteville,NC,28301,,,,
+"1420 MCCARTHY BLVD, NEW BERN NC 28562",1420,,,,McCarthy,Blvd,,,,,"New Bern",NC,28562,,,,
+"115 ENTERPRISE COURT, GREENWOOD SC 29649",115,,,,Enterprise,Ct,,,,,Greenwood,SC,29649,,,,
+"732 W 2ND ST, TIFTON GA 31794",732,,,,2nd,St,,W,,,Tifton,GA,31793,,,,"TIGER artifact"
+"97 WEST OAK AVE, PANAMA CITY FL 32401",97,,,,Oak,Ave,,,,,"Panama City",FL,32401,,,,"predir is TIGER artifact"
+"2276 WILTON DR, WILTON MANORS FL 33305",2276,,,,Wilton,Dr,,,,,"Fort Lauderdale",FL,33305,,,,"canonical place"
+"203 SOUTH WALNUT ST, FLORENCE AL 35630",203,S,,,Walnut,St,,,,,Florence,AL,35630,,,,
+"108 CENTER POINTE DR, CLARKSVILLE TN 37040",108,,,,"Center Pointe",Dr,,,,,Clarksville,TN,37040,,,,
+"1800 OLD TROY RD, UNION CITY TN 38261",1800,,Old,,Troy,Rd,,,,,"Union City",TN,38261,,,,
+"931 OLD SMITHVILLE HWY, MCMINNVILLE TN 37110",931,,Old,,Smithville,Rd,,,,,McMinnville,TN,37110,,,,
+"1301 GREENE STREET, MARIETTA OH 45750",1301,,,,Greene,St,,,,,Marietta,OH,45750,,,,
+"602 SOUTH MICHIGAN ST, SOUTH BEND IN 46601",602,S,,,Michigan,St,,,,,"South Bend",IN,46601,,,,
+"500 NORTH A STREET, RICHMOND IN 47374",500,N,,,A,St,,,,,Richmond,IN,47374,,,,
+"317 SOUTH DRAKE ROAD, KALAMAZOO MI 49009",317,S,,,Drake,Rd,,,,,Kalamazoo,MI,49009,,,,
+"105 Amity Way, Wayne PA 19087",105,,,,Amity,Dr,,,,,Wayne,PA,19087,,,,
+"305 W 45th St, New York NY 10036",305,W,,,45,St,,,,,"New York",NY,10036,,,,
+"11839 Federalist Way, Fairfax VA 22030",11839,,,,Federalist,Way,,,,,Fairfax,VA,22030,,,,
+"400 Monroe St, Hoboken, NJ 07030",400,,,,Monroe,St,,,,,Hoboken,NJ,07030,,,,
+"101 West End Avenue, New York NY 10023",101,W,,,End,Ave,,,,,"New York",NY,10023,,,,"predir is TIGER artifact"
+"2900 4TH AVE, BILLINGS MT 59101",2900,,,,4th,Ave,,N,,,Billings,MT,59101,,,,"returns 2 results"
+"158 N SCOTT STREET, JOLIET IL 60432",158,N,,,Scott,St,,,,,Joliet,IL,60432,,,,
+"1207 NETWORK CENTRE DR, EFFINGHAM IL 62401",1207,,,,"Network Centre",Dr,,,,,Effingham,IL,62401,,,,
+"3555 SOUTHERN HILLS DR, SIOUX CITY IA 51106",3555,,,,"Southern Hills",Dr,,,,,"Sioux City",IA,51106,,,,
+"300 E 3RD ST, NORTH PLATTE NE 69101",300,E,,,3rd,St,,,,,"North Platte",NE,69101,,,,
+"115 N WEBB RD, GRAND ISLAND NE 68803",115,N,,,Webb,Rd,,,,,"Grand Island",NE,68803,,,,
+"415 VALLEY VIEW DR, SCOTTSBLUFF NE 69361",501,,,,"Valley View",Dr,,,,,"Scottsbluff",NE,69361,,,,"find nearest corner"
