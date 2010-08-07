@@ -8,6 +8,7 @@ archdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["archdir"]')
 libdir19 = $(shell ruby1.9.1 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
 archdir19 = $(shell ruby1.9.1 -r rbconfig -e 'print Config::CONFIG["archdir"]')
 
+# build: build-sqlite3-ext build-ruby1.8-stamp build-ruby1.9.1-stamp
 build: build-sqlite3-ext build-ruby1.8-stamp build-ruby1.9.1-stamp
 
 build-sqlite3-ext:
@@ -18,10 +19,6 @@ build-ruby1.8-stamp:
 	dh_testdir
 
 	# clean
-	# mv ext/sqlite3_api/sqlite3_api_wrap.c ext/sqlite3_api/sqlite3_api_wrap.c.dist
-
-	# don't actually install the bin dir
-	mv bin bin.bak
 	ruby1.8 setup.rb clean
 
 	# configure
@@ -35,8 +32,6 @@ build-ruby1.8-stamp:
 
 	# install
 	ruby1.8 setup.rb install
-	#mv ext/sqlite3_api/sqlite3_api_wrap.c.dist ext/sqlite3_api/sqlite3_api_wrap.c
-	mv bin.bak bin
 
 	touch build-ruby1.8-stamp
 
@@ -44,8 +39,6 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 
 	# clean
-	#mv ext/sqlite3_api/sqlite3_api_wrap.c ext/sqlite3_api/sqlite3_api_wrap.c.dist
-	mv bin bin.bak
 	ruby1.9.1 setup.rb clean
 
 	# configure
@@ -59,8 +52,6 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 
 	# install
 	ruby1.9.1 setup.rb install
-	#mv ext/sqlite3_api/sqlite3_api_wrap.c.dist ext/sqlite3_api/sqlite3_api_wrap.c
-	mv bin.bak bin
 
 	touch build-ruby1.9.1-stamp
 
@@ -68,15 +59,16 @@ install: build
 	dh_testdir
 	dh_testroot
 
-	echo $(tmp)$(libdir18) >debian/libsqlite3-ruby1.8.install
-	echo $(tmp)$(archdir18) >>debian/libsqlite3-ruby1.8.install
+	echo $(tmp)$(libdir18) >debian/geocoder-us.install
+	echo $(tmp)$(bindir) >>debian/geocoder-us.install
 
-	echo $(tmp)$(libdir19) >debian/libsqlite3-ruby1.9.1.install
-	echo $(tmp)$(archdir19) >>debian/libsqlite3-ruby1.9.1.install
+	#echo $(tmp)$(libdir19) >debian/libsqlite3-ruby1.9.1.install
+	#echo $(tmp)$(archdir19) >>debian/libsqlite3-ruby1.9.1.install
 
 	dh_install
 
-binary: binary-indep binary-arch
+# binary: binary-indep binary-arch
+binary: binary-arch
 
 binary-indep: install
 	dh_testdir -i
