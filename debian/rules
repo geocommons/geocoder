@@ -19,6 +19,9 @@ build-ruby1.8-stamp:
 
 	# clean
 	# mv ext/sqlite3_api/sqlite3_api_wrap.c ext/sqlite3_api/sqlite3_api_wrap.c.dist
+
+	# don't actually install the bin dir
+	mv bin bin.bak
 	ruby1.8 setup.rb clean
 
 	# configure
@@ -33,6 +36,7 @@ build-ruby1.8-stamp:
 	# install
 	ruby1.8 setup.rb install
 	#mv ext/sqlite3_api/sqlite3_api_wrap.c.dist ext/sqlite3_api/sqlite3_api_wrap.c
+	mv bin.bak bin
 
 	touch build-ruby1.8-stamp
 
@@ -41,6 +45,7 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 
 	# clean
 	#mv ext/sqlite3_api/sqlite3_api_wrap.c ext/sqlite3_api/sqlite3_api_wrap.c.dist
+	mv bin bin.bak
 	ruby1.9.1 setup.rb clean
 
 	# configure
@@ -55,6 +60,7 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 	# install
 	ruby1.9.1 setup.rb install
 	#mv ext/sqlite3_api/sqlite3_api_wrap.c.dist ext/sqlite3_api/sqlite3_api_wrap.c
+	mv bin.bak bin
 
 	touch build-ruby1.9.1-stamp
 
@@ -103,7 +109,7 @@ binary-arch: install
 	dh_md5sums -a
 	dh_builddeb -a
 
-clean: unpatch
+clean:
 	dh_testdir
 	dh_testroot
 	make -C src/libsqlite3_geocoder clean
