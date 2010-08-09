@@ -1,0 +1,1 @@
+DAEMON_OPTS=/var/lib/geocoder/geocoder-us.db

@@ -12,15 +12,15 @@
 #
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/sbin/geocoder-us
-NAME=geocoder-us
-DESC=geocoder-us
+DAEMON=/usr/sbin/geocoderd
+NAME=geocoder
+DESC="geocoder server"
 
 test -x $DAEMON || exit 0
 
-LOGDIR=/var/log/geocoder-us
+LOGDIR=/var/log/geocoder
 PIDFILE=/var/run/$NAME.pid
-DODTIME=1                   # Time to wait for the server to die, in seconds
+DODTIME=3                   # Time to wait for the server to die, in seconds
                             # If this value is set too low you might not
                             # let some servers to die gracefully and
                             # 'restart' will not work
