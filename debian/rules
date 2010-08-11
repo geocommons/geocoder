@@ -2,7 +2,7 @@
 SHELL	= /bin/bash
 
 tmp	= debian/tmp
-sbindir	= /usr/sbin
+#sbindir	= /usr/sbin
 vardir  = /var
 etcdir  = /etc
 libdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
@@ -26,9 +26,9 @@ build-ruby1.8-stamp:
 	# configure
 	ruby1.8 setup.rb config \
 		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
-		--bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 		--rb-dir=$(shell pwd)/$(tmp)$(libdir18) \
 		--so-dir=$(shell pwd)/$(tmp)$(archdir18)
+		# --bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 
 	# build
 	ruby1.8 setup.rb setup
@@ -47,9 +47,9 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 	# configure
 	ruby1.9.1 setup.rb config \
 		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
-		--bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 		--rb-dir=$(shell pwd)/$(tmp)$(libdir19) \
 		--so-dir=$(shell pwd)/$(tmp)$(archdir19)
+		# --bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 
 	# build
 	ruby1.9.1 setup.rb setup
@@ -64,7 +64,7 @@ install: build
 	dh_testroot
 
 	echo $(tmp)$(libdir18) >debian/geocoder-us.install
-	echo $(tmp)$(sbindir) >>debian/geocoder-us.install
+	# echo $(tmp)$(sbindir) >>debian/geocoder-us.install
 	echo $(tmp)$(vardir) >>debian/geocoder-us.install
 	echo $(tmp)$(etcdir) >>debian/geocoder-us.install
 
