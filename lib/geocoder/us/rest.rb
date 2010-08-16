@@ -6,7 +6,7 @@ require 'json'
 get '/geocode' do
   if params[:q]
     {
-      :results => @@db.geocode params[:q],
+      :results => @@db.geocode(params[:q]),
       :address => params[:q]
     }.to_json
   else
