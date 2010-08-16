@@ -1,0 +1,13 @@
+{
+  'address': '41 Decatur St 94103',
+'results': [{'city': 'San Francisco',
+              'fips_county': '06075',
+              'lat': 37.772502000000003,
+              'lon': -122.406032,
+              'number': '41',
+              'precision': 'range',
+              'prenum': '',
+              'score': 0.81200000000000006,
+              'state': 'CA',
+              'street': 'Decatur St',
+              'zip': '94103'}]}
