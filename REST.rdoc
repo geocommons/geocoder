@@ -15,28 +15,35 @@ Parameters:
 
   q = a string containing a US street address.
 
-Returns:
+Returns a GeoJSON feature collection:
 
     {
-      'address': '41 Decatur St 94103',
-      'results': [
-        { 'number': '41',
-          'street': 'Decatur St',
-          'city': 'San Francisco',
-          'state': 'CA',
-          'zip': '94103',
-          'fips_county': '06075',
-          'lat': 37.772502,
-          'lon': -122.406032,
-          'precision': 'range',
-          'score': 0.812 }
-      ]
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "number": "41",
+                    "street": "Decatur St",
+                    "city": "San Francisco",
+                    "state": "CA",
+                    "zip": "94103",
+                    "fips_county": "06075",
+                    "score": 1.0,
+                    "precision":"range"
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-122.406032, 37.772502]
+                }
+            }
+        ],
+        "address":"41 Decatur St, San Francisco CA 94103"
     }
 
-The 'results' list in the returned JSON object contains zero or more addresses
-that most closely match the provided string, along with their interpolated
-coordinates. Each address result in the list contains the following key/value
-pairs:
+
+Each address match in the feature collection contains some combination of the
+following properties:
 
     number
         The building number of the address. When a building number is not
@@ -86,8 +93,3 @@ pairs:
         result, expressed as a float between 0 and 1. A higher score indicates
         a closer match. Results with a score below 0.5 should be regarded with
         care.
-
-    lat / lon
-        The approximate latitude and longitude of the geocoded address or
-        intersection, given as floating point numbers.
-

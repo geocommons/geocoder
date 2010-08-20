@@ -15,12 +15,13 @@ get '/geocode' do
         :properties => result,
         :geometry => {
           :type => "Point",
-          :coordinates => [result[:lon], result[:lat]]
+          :coordinates => coords
         }
       }
     end
     {
-      :type => "FeatureCollection"
+      :type => "FeatureCollection",
+      :address => params[:q],
       :features => features
     }.to_json
   else
