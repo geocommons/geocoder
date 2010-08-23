@@ -1,2 +1,2 @@
 # $DATABASE must point to a working Geocoder::US database for this to run.
-DATABASE=/var/lib/geocoder-us/geocoder-us.db
+DATABASE=/var/lib/geocoder-us/geocoder.db
