@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
     s.name          = 'Geocoder-US'
-    s.version       = "2.0.0"
+    s.version       = "2.0.1pre"
     s.author        = "Schuyler Erle"
     s.email         = 'geocoder@entropyfree.com'
     s.description   = "US address geocoding based on TIGER/Line."
