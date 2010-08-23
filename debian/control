@@ -2,8 +2,8 @@ Source: geocoder-us
 Section: unknown
 Priority: extra
 Maintainer: Schuyler Erle <schuyler@simplegeo.com>
-Build-Depends: debhelper (>= 7), libsqlite3-dev
-Standards-Version: 3.8.3
+Build-Depends: debhelper (>= 7), libsqlite3-dev, ruby1.8, cdbs, ruby-pkg-tools
+Standards-Version: 3.8.4
 Homepage: http://github.com/simplegeo/geocoder/
 
 Package: geocoder-us

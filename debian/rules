@@ -1,129 +1,19 @@
 #!/usr/bin/make -f
-SHELL	= /bin/bash
 
-tmp	= debian/tmp
-#sbindir	= /usr/sbin
-vardir  = /var
-etcdir  = /etc
-libdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
-archdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["archdir"]')
-libdir19 = $(shell ruby1.9.1 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
-archdir19 = $(shell ruby1.9.1 -r rbconfig -e 'print Config::CONFIG["archdir"]')
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/ruby-pkg-tools/1/class/ruby-setup-rb.mk
 
-# build: build-sqlite3-ext build-ruby1.8-stamp build-ruby1.9.1-stamp
-build: build-sqlite3-ext build-ruby1.8-stamp build-ruby1.9.1-stamp
 
-build-sqlite3-ext:
-	make -C src/libsqlite3_geocoder
-	cp src/libsqlite3_geocoder/*.so lib/geocoder/us/sqlite3.so
+# Add here any variable or target overrides you need.
 
-build-ruby1.8-stamp:
-	dh_testdir
+# install/libmongo-ruby1.8::
+# 	rm -rf debian/tmp
+# 	mv debian/$(cdbs_curpkg) debian/tmp
 
-	# clean
-	ruby1.8 setup.rb clean
+# install/libbson-ruby1.8::
+# 	rm -rf debian/tmp
+# 	mv debian/$(cdbs_curpkg) debian/tmp
 
-	# configure
-	ruby1.8 setup.rb config \
-		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
-		--rb-dir=$(shell pwd)/$(tmp)$(libdir18) \
-		--so-dir=$(shell pwd)/$(tmp)$(archdir18)
-		# --bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
-
-	# build
-	ruby1.8 setup.rb setup
-
-	# install
-	ruby1.8 setup.rb install
-
-	touch build-ruby1.8-stamp
-
-build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
-	dh_testdir
-
-	# clean
-	ruby1.9.1 setup.rb clean
-
-	# configure
-	ruby1.9.1 setup.rb config \
-		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
-		--rb-dir=$(shell pwd)/$(tmp)$(libdir19) \
-		--so-dir=$(shell pwd)/$(tmp)$(archdir19)
-		# --bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
-
-	# build
-	ruby1.9.1 setup.rb setup
-
-	# install
-	ruby1.9.1 setup.rb install
-
-	touch build-ruby1.9.1-stamp
-
-install: build
-	dh_testdir
-	dh_testroot
-
-	echo $(tmp)$(libdir18) >debian/geocoder-us.install
-	# echo $(tmp)$(sbindir) >>debian/geocoder-us.install
-	echo $(tmp)$(vardir) >>debian/geocoder-us.install
-	echo $(tmp)$(etcdir) >>debian/geocoder-us.install
-
-	mkdir -p $(tmp)$(vardir)/lib/geocoder-us
-	mkdir -p $(tmp)$(vardir)/run/geocoder-us
-	mkdir -p $(tmp)$(vardir)/log/geocoder-us
-
-	#echo $(tmp)$(libdir19) >debian/libsqlite3-ruby1.9.1.install
-
-	dh_install
-
-# binary: binary-indep binary-arch
-binary: binary-arch
-
-binary-indep: install
-	dh_testdir -i
-	dh_testroot -i
-
-	# dh_installchangelogs -i CHANGELOG.rdoc
-	dh_installdocs -i
-	dh_link -i
-	dh_compress -i -X.rb -X.html
-	dh_fixperms -i
-	dh_installdeb -i
-	dh_gencontrol -i
-	dh_md5sums -i
-	dh_builddeb -i
-
-binary-arch: install
-	dh_testdir -a
-	dh_testroot -a
-
-	# install init script and default
-	dh_installinit
-
-	# dh_installchangelogs -a CHANGELOG.rdoc
-	dh_installdocs -a -A README.rdoc
-	dh_link -a
-	dh_strip -a
-	dh_compress -a -X.rb -X.html
-	dh_fixperms -a
-	dh_makeshlibs -a
-	dh_installdeb -a
-	dh_shlibdeps -a
-	dh_gencontrol -a
-	dh_md5sums -a
-	dh_builddeb -a
-
-clean:
-	dh_testdir
-	dh_testroot
-	make -C src/libsqlite3_geocoder clean
-	-ruby1.8 setup.rb clean
-	-ruby1.9.1 setup.rb clean
-	-rm -f config.save
-	-rm -f build-ruby1.[689]-stamp
-	-rm -f lib/geocoder/us/sqlite3.so
-	-rm -f debian/*.install
-
-	dh_clean
-
-.PHONY: build binary binary-indep binary-arch clean
+# install/libcbson-ruby1.8::
+# 	rm -rf debian/tmp
+# 	mv debian/$(cdbs_curpkg) debian/tmp
