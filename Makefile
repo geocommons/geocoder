@@ -10,4 +10,5 @@ install: all
 
 clean:
 	make -C src clean
+	rm -f lib/geocoder/us/sqlite3.so
 	rm -f *.gem

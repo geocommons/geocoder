@@ -1,4 +1,4 @@
-require 'rubygems'
+# require 'rubygems'
 require 'sqlite3'
 # require 'text'
 # require 'levenshtein'
