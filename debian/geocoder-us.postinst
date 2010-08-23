@@ -21,7 +21,7 @@ set -e
 case "$1" in
     configure)
          # just make sure that /usr/bin/thin can write its PID file here
-         chown www-data /var/run/geocoder
+         chown www-data /var/run/geocoder-us
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

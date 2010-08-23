@@ -13,9 +13,9 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/bin/thin
-DAEMON_OPTS="-C /etc/geocoder/thin.yml -R /etc/geocoder/geocoder.ru"
-NAME=geocoder
-DESC="geocoder server"
+DAEMON_OPTS="-C /etc/geocoder-us/thin.yml -R /etc/geocoder-us/geocoder.ru"
+NAME=geocoder-us
+DESC="Geocoder::US server"
 
 test -x $DAEMON || exit 0
 

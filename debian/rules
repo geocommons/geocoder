@@ -68,8 +68,8 @@ install: build
 	echo $(tmp)$(vardir) >>debian/geocoder-us.install
 	echo $(tmp)$(etcdir) >>debian/geocoder-us.install
 
-	mkdir -p $(tmp)$(vardir)/lib/geocoder
-	mkdir -p $(tmp)$(vardir)/run/geocoder
+	mkdir -p $(tmp)$(vardir)/lib/geocoder-us
+	mkdir -p $(tmp)$(vardir)/run/geocoder-us
 
 	#echo $(tmp)$(libdir19) >debian/libsqlite3-ruby1.9.1.install
 
