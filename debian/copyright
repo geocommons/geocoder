@@ -1,35 +1,35 @@
 This work was packaged for Debian by:
 
-    Schuyler Erle <sderle@unknown> on Sat, 07 Aug 2010 00:51:40 +0000
+    Schuyler Erle <schuyler@simplegeo.com> on Sat, 07 Aug 2010 00:51:40 +0000
 
-It was downloaded from <url://example.com>
+It was downloaded from http://github.com/simplegeo/geocoder/
 
 Upstream Author(s):
 
-    <put author's name and email here>
-    <likewise for another author>
+    Schuyler Erle <schuyler@simplegeo.com>
 
 Copyright:
 
-    <Copyright (C) YYYY Name OfAuthor>
-    <likewise for another author>
+    (c) 2009 FortiusOne, Inc.
 
 License:
 
-    <Put the license of the package here indented by 4 spaces>
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This package is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
 The Debian packaging is:
 
-    Copyright (C) 2010 Schuyler Erle <sderle@unknown>
+    Copyright (C) 2010 SimpleGeo, Inc.
 
-# Please chose a license for your packaging work. If the program you package
-# uses a mainstream license, using the same license is the safest choice.
-# Please avoid to pick license terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.
-# If you just want it to be GPL version 3, leave the following lines in.
-
-and is licensed under the GPL version 3, 
-see `/usr/share/common-licenses/GPL-3'.
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
+and is licensed under the GPL version 3, see `/usr/share/common-licenses/GPL-3'.
