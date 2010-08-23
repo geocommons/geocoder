@@ -5,15 +5,8 @@ include /usr/share/ruby-pkg-tools/1/class/ruby-setup-rb.mk
 
 
 # Add here any variable or target overrides you need.
+install/geocoder-us::
+	install -d -m 0755 $(DEB_DESTDIR)var/lib/geocoder-us \
+		$(DEB_DESTDIR)var/run/geocoder-us \
+		$(DEB_DESTDIR)var/log/geocoder-us
 
-# install/libmongo-ruby1.8::
-# 	rm -rf debian/tmp
-# 	mv debian/$(cdbs_curpkg) debian/tmp
-
-# install/libbson-ruby1.8::
-# 	rm -rf debian/tmp
-# 	mv debian/$(cdbs_curpkg) debian/tmp
-
-# install/libcbson-ruby1.8::
-# 	rm -rf debian/tmp
-# 	mv debian/$(cdbs_curpkg) debian/tmp
