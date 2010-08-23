@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#! /usr/bin/ruby1.9.1
 require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
