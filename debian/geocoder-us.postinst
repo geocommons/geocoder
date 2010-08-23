@@ -20,7 +20,8 @@ set -e
 
 case "$1" in
     configure)
-        mkdir -p /var/lib/geocoder
+         # just make sure that /usr/bin/thin can write its PID file here
+         chown www-data /var/run/geocoder
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

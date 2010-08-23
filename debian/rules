@@ -3,6 +3,8 @@ SHELL	= /bin/bash
 
 tmp	= debian/tmp
 sbindir	= /usr/sbin
+vardir  = /var
+etcdir  = /etc
 libdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
 archdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["archdir"]')
 libdir19 = $(shell ruby1.9.1 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
@@ -23,6 +25,7 @@ build-ruby1.8-stamp:
 
 	# configure
 	ruby1.8 setup.rb config \
+		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
 		--bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 		--rb-dir=$(shell pwd)/$(tmp)$(libdir18) \
 		--so-dir=$(shell pwd)/$(tmp)$(archdir18)
@@ -43,6 +46,7 @@ build-ruby1.9.1-stamp: $(QUILT_STAMPFN)
 
 	# configure
 	ruby1.9.1 setup.rb config \
+		--sysconfdir=$(shell pwd)/$(tmp)$(etcdir) \
 		--bin-dir=$(shell pwd)/$(tmp)$(sbindir) \
 		--rb-dir=$(shell pwd)/$(tmp)$(libdir19) \
 		--so-dir=$(shell pwd)/$(tmp)$(archdir19)
@@ -61,9 +65,13 @@ install: build
 
 	echo $(tmp)$(libdir18) >debian/geocoder-us.install
 	echo $(tmp)$(sbindir) >>debian/geocoder-us.install
+	echo $(tmp)$(vardir) >>debian/geocoder-us.install
+	echo $(tmp)$(etcdir) >>debian/geocoder-us.install
+
+	mkdir -p $(tmp)$(vardir)/lib/geocoder
+	mkdir -p $(tmp)$(vardir)/run/geocoder
 
 	#echo $(tmp)$(libdir19) >debian/libsqlite3-ruby1.9.1.install
-	#echo $(tmp)$(archdir19) >>debian/libsqlite3-ruby1.9.1.install
 
 	dh_install
 
@@ -87,6 +95,9 @@ binary-indep: install
 binary-arch: install
 	dh_testdir -a
 	dh_testroot -a
+
+	# install init script and default
+	dh_installinit
 
 	# dh_installchangelogs -a CHANGELOG.rdoc
 	dh_installdocs -a -A README.rdoc

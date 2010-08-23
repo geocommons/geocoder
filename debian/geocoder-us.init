@@ -12,14 +12,14 @@
 #
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/sbin/geocoderd
+DAEMON=/usr/bin/thin
+DAEMON_OPTS="-C /etc/geocoder/thin.yml -R /etc/geocoder/geocoder.ru"
 NAME=geocoder
 DESC="geocoder server"
 
 test -x $DAEMON || exit 0
 
-LOGDIR=/var/log/geocoder
-PIDFILE=/var/run/$NAME.pid
+PIDFILE=/var/run/$NAME/$NAME.pid
 DODTIME=3                   # Time to wait for the server to die, in seconds
                             # If this value is set too low you might not
                             # let some servers to die gracefully and
@@ -29,6 +29,14 @@ DODTIME=3                   # Time to wait for the server to die, in seconds
 if [ -f /etc/default/geocoder-us ] ; then
     . /etc/default/geocoder-us
 fi
+# $DATABASE should be set to the location of the database in /etc/default/gecoder-us
+[ -z "$DATABASE" ] && exit 0
+if [ ! -r "$DATABASE" ] ; then
+    echo "$DATABASE not found; not running command."
+    exit 0
+fi
+# set the environment variable so that the daemon can find the database
+export GEOCODER_DB="$DATABASE"
 
 set -e
 
@@ -39,7 +47,7 @@ running_pid()
     name=$2
     [ -z "$pid" ] && return 1
     [ ! -d /proc/$pid ] &&  return 1
-    cmd=`cat /proc/$pid/cmdline | tr "\000" "\n"|head -n 1 |cut -d : -f 1`
+    cmd=`cat /proc/$pid/cmdline | tr "\000" "\n"|head -n 1 |cut -d" " -f 1`
     # Is this the expected child?
     [ "$cmd" != "$name" ] &&  return 1
     return 0
@@ -54,7 +62,7 @@ running()
     [ ! -f "$PIDFILE" ] && return 1
     # Obtain the pid and check it against the binary name
     pid=`cat $PIDFILE`
-    running_pid $pid $DAEMON || return 1
+    running_pid $pid `basename $DAEMON` || return 1
     return 0
 }
 
@@ -80,9 +88,10 @@ force_stop() {
 
 case "$1" in
   start)
+        running && exit 0
         echo -n "Starting $DESC: "
-        start-stop-daemon --start --quiet --pidfile $PIDFILE \
-            --exec $DAEMON -- $DAEMON_OPTS
+        $DAEMON $DAEMON_OPTS $1
+        sleep 1
         if running ; then
             echo "$NAME."
         else
@@ -90,12 +99,13 @@ case "$1" in
         fi
         ;;
   stop)
+        running || exit 0
         echo -n "Stopping $DESC: "
-        start-stop-daemon --stop --quiet --pidfile $PIDFILE \
-            --exec $DAEMON
+        $DAEMON $DAEMON_OPTS $1
         echo "$NAME."
         ;;
   force-stop)
+        running || exit 0
         echo -n "Forcefully stopping $DESC: "
         force_stop
         if ! running ; then
@@ -123,18 +133,13 @@ case "$1" in
         # just the same as "restart" except that it does nothing if the
         # daemon isn't already running.
         # check wether $DAEMON is running. If so, restart
-        start-stop-daemon --stop --test --quiet --pidfile \
-            /var/run/$NAME.pid --exec $DAEMON \
-            && $0 restart \
-            || exit 0
+        running || exit 0
+        $DAEMON $DAEMON_OPTS stop && $DAEMON $DAEMON_OPTS start
         ;;
   restart)
-    echo -n "Restarting $DESC: "
-        start-stop-daemon --stop --quiet --pidfile \
-            /var/run/$NAME.pid --exec $DAEMON
-        [ -n "$DODTIME" ] && sleep $DODTIME
-        start-stop-daemon --start --quiet --pidfile \
-            /var/run/$NAME.pid --exec $DAEMON -- $DAEMON_OPTS
+        running || exit 0
+        echo -n "Restarting $DESC: "
+        $DAEMON $DAEMON_OPTS restart
         echo "$NAME."
         ;;
   status)
