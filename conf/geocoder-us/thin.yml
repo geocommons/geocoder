@@ -1,8 +1,8 @@
 environment: production
-chdir: /var/lib/geocoder
+chdir: /var/lib/geocoder-us
 user: www-data
 group: www-data
 port: 8080
-pid: /var/run/geocoder/geocoder.pid
+pid: /var/run/geocoder-us/geocoder-us.pid
 tag: geocoder
 daemonize: true
