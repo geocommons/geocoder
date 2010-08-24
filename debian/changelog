@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg2) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Build the SQLite extension.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 24 Aug 2010 20:39:11 +0000
+
 geocoder-us (2.0.1pre-1sg1) lucid; urgency=low
 
   [ Ian Eure ]
