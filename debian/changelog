@@ -1,3 +1,17 @@
+geocoder-us (2.0.1pre-1sg1) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Add source format.
+  * Build-depend on ruby1.8, build with CDBS, update standards-version.
+  * Strip +x bit from stuff that doesn't need it.
+  * Update copyright.
+  * Update mainteiners, fix section, add .
+  * Fix installation of  stuff in /var.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 24 Aug 2010 02:33:44 +0000
+
 geocoder-us (2.0.1pre-1sg0) unstable; urgency=low
 
   * Initial release
