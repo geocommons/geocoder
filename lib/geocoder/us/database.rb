@@ -8,6 +8,7 @@ require 'pp'
 require 'time'
 
 require 'geocoder/us/address'
+require 'geocoder/us/metaphone'
 
 module Geocoder
 end
@@ -66,17 +67,17 @@ module Geocoder::US
         #   result = dist.to_f / [test1.length, test2.length].max
         #   func.set_result result 
         # end
-        # @db.create_function("metaphone", 2) do |func, string, len|
-        #   test = string.to_s.gsub(/\W/o, "")
-        #   if test =~ /^(\d+)/o
-        #     mph = $1
-        #   elsif test =~ /^([wy])$/io
-        #     mph = $1
-        #   else
-        #     mph = Text::Metaphone.metaphone test
-        #   end
-        #   func.result = mph[0...len.to_i]
-        # end
+        @db.create_function("rb_metaphone", 2) do |func, string, len|
+          test = string.to_s.gsub(/\W/o, "")
+          if test =~ /^(\d+)/o
+            mph = $1
+          elsif test =~ /^([wy])$/io
+            mph = $1
+          else
+            mph = Text::Metaphone.metaphone test
+          end
+          func.result = mph[0...len.to_i]
+        end
         # @db.create_function("nondigit_prefix", 1) do |func, string|
         #   string.to_s =~ /^(.*\D)?(\d+)$/o
         #   func.result = ($1 || "")
@@ -115,7 +116,7 @@ module Geocoder::US
 
     # Generate enough SQL placeholders for a list of objects.
     def metaphone_placeholders_for (list)
-      (["metaphone(?,5)"] * list.length).join(",")
+      (["rb_metaphone(?,5)"] * list.length).join(",")
     end
 
     # Execute an SQL statement, bind a list of parameters, and
