@@ -23,6 +23,7 @@ case "$1" in
          # just make sure that /usr/bin/thin can write its PID file and logs
          chown www-data /var/run/geocoder-us
          chown www-data /var/log/geocoder-us
+         start geocoder-us
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
