@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg28) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * All-singing, all-dancing REST server.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 04 Nov 2010 19:18:25 +0000
+
 geocoder-us (2.0.1pre-1sg27) lucid; urgency=low
 
   [ Schuyler Erle ]
