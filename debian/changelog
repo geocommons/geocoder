@@ -1,3 +1,18 @@
+geocoder-us (2.0.1pre-1sg27) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Work around for segfaults in the Metaphone C code.
+  * Add Upstart config.
+  * Remove default and init script, start/stop in postinst/prerm.
+  * Fix up prerm and postinst scripts.
+  * Don't daemonize when running with Upstart.
+  * Tweak respawn rate.
+  * Load a new database handle on every request. Hrrr.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 04 Nov 2010 18:50:00 +0000
+
 geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
 
   * UNRELEASED
