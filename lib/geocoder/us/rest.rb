@@ -2,7 +2,7 @@ require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
 
-#@@db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
+set :port, 8081
 get '/geocode' do
   if params[:q]
     db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
