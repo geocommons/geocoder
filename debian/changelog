@@ -1,5 +1,11 @@
 geocoder-us (2.0.1pre-1sg29) lucid; urgency=low
 
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 09 Nov 2010 21:28:24 +0000
+
+geocoder-us (2.0.1pre-1sg29) lucid; urgency=low
+
   [ Schuyler Erle ]
   * Refactor rest.rb slightly for speed?
 
