@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg33) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Add street-side offsets of 7.5m by default.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 29 Nov 2010 23:12:51 +0000
+
 geocoder-us (2.0.1pre-1sg32) lucid; urgency=low
 
   * UNRELEASED
