@@ -6,6 +6,7 @@ require 'sqlite3'
 require 'set'
 require 'pp'
 require 'time'
+require 'thread'
 
 require 'geocoder/us/address'
 require 'geocoder/us/metaphone'
@@ -523,9 +524,28 @@ module Geocoder::US
       Math.sqrt(dx ** 2 + dy ** 2)
     end
 
+    def street_side_offset (b, p1, p2)
+      # Find a point (x2, y2) that is at a distance b from a line A=(x0, y0)-(x1, y1)
+      # along a tangent B passing through (x1,y1)-(x2,y2).
+      # Let a = the length of line A
+      a = Math.sqrt((p2[0]-p1[0])**2.0 + (p2[1]-p1[1])**2.0)
+      # theta is the angle between the line A and the x axis
+      theta = Math.atan2(p2[1]-p1[1], p2[0]-p1[0])
+      # Now lines A and B form a right triangle where the third vertex is (x2, y2).
+      # Let c = the length of the hypotenuse line C=(x0,y0)-(x2,y2)
+      c = Math.sqrt(a**2.0 + b**2.0)
+      # Now alpha is the angle between lines A and C.
+      alpha = Math.atan2(b, a)
+      # Therefore the difference between theta and alpha is the angle between C and
+      # the x axis. Since we know the length of C, the lengths of the two lines
+      # parallel to the axes that form a right triangle C, and hence the
+      # coordinates (x2, y2), fall out.
+      return [p1[0] + c * Math.cos(theta - alpha), p1[1] + c * Math.sin(theta - alpha)]
+    end
+
     # Find an interpolated point along a list of linestring vertices
     # proportional to the given fractional distance along the line.
-    def interpolate (points, fraction)
+    def interpolate (points, fraction, side, offset=0.000075)
       $stderr.print "POINTS: #{points.inspect}" if @debug
       return points[0] if fraction == 0.0 
       return points[-1] if fraction == 1.0 
@@ -541,7 +561,7 @@ module Geocoder::US
           dx = (points[n][0] - points[n-1][0]) * (target/step) * scale
           dy = (points[n][1] - points[n-1][1]) * (target/step)
           found = [points[n-1][0]+dx, points[n-1][1]+dy]
-          return found.map {|x| format("%.6f", x).to_f}
+          return street_side_offset(offset*side, points[n-1], found)
         end
       end
      # raise "Can't happen!"
@@ -683,10 +703,15 @@ module Geocoder::US
       end
       candidates.map {|record|
         dist = interpolation_distance record
-        $stderr.print "DIST: #{dist}\n" if @debug
         points = unpack_geometry record[:geometry]
-        points.reverse! if record[:flipped]
-        record[:lon], record[:lat] = interpolate points, dist
+        side = (record[:side] == "R" ? 1 : -1)
+        if record[:flipped]
+          side *= -1
+          points.reverse!
+        end
+        $stderr.print "DIST: #{dist} FLIPPED: #{record[:flipped]} SIDE: #{side}\n" if @debug
+        found = interpolate points, dist, side
+        record[:lon], record[:lat] = found.map {|x| format("%.6f", x).to_f}
       }
       
       canonicalize_places! candidates if canonical_place
