@@ -49,3 +49,7 @@ get '/geocode' do
     "parameter 'q' is missing"
   end
 end
+
+get '/health' do
+  "All is well."
+end
