@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg35) lucid; urgency=low
+
+  [ dsmith ]
+  * Added a health endpoint to the geocoder
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 20 Dec 2010 19:08:59 +0000
+
 geocoder-us (2.0.1pre-1sg34) lucid; urgency=low
 
   * UNRELEASED
