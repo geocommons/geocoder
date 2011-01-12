@@ -1,3 +1,17 @@
+geocoder-us (2.0.1pre-1sg38) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Don't run directly through thin; this causes segfaults on our Debian
+    systems.
+  * Remove thin configs.
+  * Go back to using embedded metaphone function, which will improve
+    result quality.
+  * Move the database open back out to the init step.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 12 Jan 2011 02:00:40 +0000
+
 geocoder-us (2.0.1pre-1sg37) lucid; urgency=low
 
   * UNRELEASED
