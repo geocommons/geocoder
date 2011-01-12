@@ -545,6 +545,7 @@ module Geocoder::US
 
     # Find an interpolated point along a list of linestring vertices
     # proportional to the given fractional distance along the line.
+    # Offset is in degrees and defaults to ~8 meters.
     def interpolate (points, fraction, side, offset=0.000075)
       $stderr.print "POINTS: #{points.inspect}" if @debug
       return points[0] if fraction == 0.0 
