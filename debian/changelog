@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg39) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a NaN bug caused by some TIGER/Line from/to house numbers being
+    equal.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 12 Jan 2011 02:30:40 +0000
+
 geocoder-us (2.0.1pre-1sg38) lucid; urgency=low
 
   [ Schuyler Erle ]
