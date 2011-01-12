@@ -487,6 +487,9 @@ module Geocoder::US
         0.0
       elsif tohn < number
         1.0
+      elsif tohn == fromhn
+        # this is not supposed to happen, per Census Bureau rules, but apparently it does anyway.
+        0.0
       else
         (number - fromhn) / (tohn - fromhn).to_f
       end
