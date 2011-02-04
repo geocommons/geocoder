@@ -54,3 +54,5 @@ address,number,street,city,state,zip,lon,lat,count,comment
 "2518 S Pacific Hwy, Medford OR",2499,S Pacific Hwy,Medford,OR,97501,-122.850051,42.302223,1,street
 "1111 River Rd Apt A17, Edgewater NJ 07020",1111,River Rd,Edgewater,NJ,07020,-73.972261,40.830852,1,FIXME: parsing
 "460 West St, Amherst MA 01002-2964",460,West St,Amherst,MA,01002,-72.520078,42.340123,1,address is all abbreviations
+"23 2nd St, Brooklyn NY",23,2nd St,Brooklyn,NY,11231,-73.993897,40.67895,1,regression caused it to point to East Otto
+"23 2nd St, Brooklyn, New York",23,2nd St,Brooklyn,NY,11231,-73.993897,40.67895,1,regression caused it to point to Manhattan
