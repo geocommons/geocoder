@@ -36,9 +36,9 @@ class TestDatabase < Test::Unit::TestCase
   def test_zip
       return if @db.nil?
       [ {:city=>"Chicago", :zip=>"60601", :state=>"IL", :precision=>:zip,
-         :fips_county=>"17031", :lon=>"-87.68732", :lat=>"41.811929", :score => 0.714},
+         :fips_county=>"17031", :lon=>-87.68732, :lat=>41.811929, :score => 0.714},
         {:city=>"Philadelphia", :zip=>"19019", :state=>"PA", :precision=>:zip,
-         :fips_county=>"42101", :lon=>"-75.11787", :lat=>"40.001811", :score => 0.714}
+         :fips_county=>"42101", :lon=>-75.11787, :lat=>40.001811, :score => 0.714}
       ].each {|record|
         result = @db.geocode(record[:zip])
         assert_equal result.length, 1
@@ -82,7 +82,8 @@ class TestDatabase < Test::Unit::TestCase
         #    }
         # end
         
-        def test_sample
+
+         def test_sample
            return if @db.nil?
            FasterCSV.foreach(Base + "/data/db-test.csv", {:headers=>true}) do |row|
              result = @db.geocode(row[0], true)
