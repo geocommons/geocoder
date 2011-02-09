@@ -1,3 +1,17 @@
+geocoder-us (2.0.1pre-1sg42) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Break tests to demonstrate Brooklyn/Manhattan regression.
+  * Fix Brooklyn/Manhattan regression. Hooray, test-driven development!
+  * Fix the "Mountain View, CA" bug where "normalizing" a street type in
+    a city name would prevent the city from getting removed from the
+    street parts in Address.city=.
+  * Add more tests to cover recent bugs.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 09 Feb 2011 22:37:07 +0000
+
 geocoder-us (2.0.1pre-1sg41) lucid; urgency=low
 
   [ Schuyler Erle ]
