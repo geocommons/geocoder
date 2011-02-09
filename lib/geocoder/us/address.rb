@@ -198,10 +198,6 @@ module Geocoder::US
 
       # SPECIAL CASE: no city, but a state with the same name. e.g. "New York"
       @city << @full_state if @state.downcase != @full_state.downcase
-
-      # SPECIAL CASE: if given a single city string, and it's not the
-      # same as the street string, remove it from the street parts
-      self.city= @city if @city.length == 1 and @city != @street
     end
     
     def expand_streets(street)
@@ -275,6 +271,7 @@ module Geocoder::US
     def city= (strings)
       # NOTE: This will still fail on: 100 Broome St, 33333 (if 33333 is
       # Broome, MT or what)
+      strings = expand_streets(strings) # fix for "Mountain View" -> "Mountain Vw"
       match = Regexp.new('\s*\b(?:' + strings.join("|") + ')\b\s*$', Regexp::IGNORECASE)
       @street = @street.map {|string| string.gsub(match, '')}.select {|s|!s.empty?}
     end

@@ -153,7 +153,7 @@ module Geocoder::US
    
     def places_by_zip (city, zip)
       execute("SELECT *, levenshtein(?, city) AS city_score
-               FROM place WHERE zip = ? order by priority desc LIMIT 1;", city, zip)
+               FROM place WHERE zip = ? order by priority desc;", city, zip)
     end
 
     # Query the place table for by city, optional state, and zip.
@@ -172,7 +172,7 @@ module Geocoder::US
       end
       metaphones = metaphone_placeholders_for tokens
       execute("SELECT *, levenshtein(?, city) AS city_score
-                FROM place WHERE city_phone IN (#{metaphones}) #{and_state} order by priority desc LIMIT 1;", *args)
+                FROM place WHERE city_phone IN (#{metaphones}) #{and_state} order by priority desc;", *args)
     end
 
     # Generate an SQL query and set of parameters against the feature and range
