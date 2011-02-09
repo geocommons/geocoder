@@ -98,10 +98,16 @@ class TestDatabase < Test::Unit::TestCase
              }
            end
          end
+
+         def test_city_with_street_type_in_name
+           result = @db.geocode("Mountain View, CA")
+           assert_equal result.length, 1
+           assert_equal result[0][:city], "Mountain View" # (and not "Mountain View Acres, CA")
+           assert_equal result[0][:state], "CA"
+         end
          
          def test_should_get_street_number_correctly
            result = @db.geocode("460 West St, Amherst MA 01002-2964", true)
-           puts "all results=#{result.inspect}"
            assert_equal '460', result[0][:number] 
          end
          
