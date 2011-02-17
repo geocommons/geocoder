@@ -269,6 +269,10 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
+      begin
+        execute "DROP TABLE intersection;"
+      rescue SQLite3::SQLException
+      end
       in_list = placeholders_for fids
       sql = "
         CREATE TEMPORARY TABLE intersection AS
@@ -292,7 +296,6 @@ module Geocoder::US
             AND f1.fid = a.fid AND f2.fid = b.fid
             AND f1.zip = f2.zip
             AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      execute "DROP TABLE intersection;"
       flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       results
     end
