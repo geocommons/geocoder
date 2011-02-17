@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg43) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a weird race condition when geocoding intersections.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 17 Feb 2011 22:11:48 +0000
+
 geocoder-us (2.0.1pre-1sg42) lucid; urgency=low
 
   [ Schuyler Erle ]
