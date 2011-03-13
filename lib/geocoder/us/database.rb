@@ -6,6 +6,7 @@ require 'levenshtein'
 require 'set'
 require 'pp'
 require 'time'
+require 'thread'
 
 require 'geocoder/us/address'
 
@@ -493,11 +494,20 @@ module Geocoder::US
     def unpack_geometry (geom)
       points = []
       if !geom.nil?
-        coords = geom.unpack "V*" # little-endian 4-byte long ints
-      
-      # now map them into signed floats
-        coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
-        points << [coords.shift, coords.shift] until coords.empty?
+	# Pete - The database format is completely different to the one
+	# expected by the code, so I've done some detective work to
+	# figure out what it should be. It looks like the format is
+	# | 1 byte Type | 4 byte SRID | 4 byte element count| 8 byte double coordinates *
+	# I've added new code to read this, and commented out the old.
+	info = geom.unpack('CVVD*')
+	coords = info.slice(3, info.length)
+	points << [coords.shift, coords.shift] until coords.empty?
+
+      #  coords = geom.unpack "V*" # little-endian 4-byte long ints
+      #
+      ## now map them into signed floats
+      #  coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
+      #  points << [coords.shift, coords.shift] until coords.empty?
       end
       points
     end

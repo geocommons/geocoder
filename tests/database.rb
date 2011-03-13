@@ -2,13 +2,13 @@ $LOAD_PATH.unshift '../lib'
 
 require 'test/unit'
 require 'geocoder/us/database'
-require 'fastercsv'
+require 'csv'
 
 Base = File.dirname(__FILE__)
 
 module Geocoder::US
   Database_File = (
-    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "/Users/katechapman/shineygeocoder.db")
+    (ARGV[0] and !ARGV[0].empty?) ? ARGV[0] : "../geocoderdata/geocoder.db")
 end
 
 class TestDatabase < Test::Unit::TestCase
@@ -84,7 +84,7 @@ class TestDatabase < Test::Unit::TestCase
         
         def test_sample
            return if @db.nil?
-           FasterCSV.foreach(Base + "/data/db-test.csv", {:headers=>true}) do |row|
+           CSV.foreach(Base + "/data/db-test.csv", {:headers=>true}) do |row|
              result = @db.geocode(row[0], true)
              result[0][:count] = result.map{|a|[a[:lat], a[:lon]]}.to_set.length
              fields = row.headers - ["comment", "address"]
