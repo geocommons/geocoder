@@ -1,0 +1,59 @@
+geocoder-us for Debian
+----------------------
+
+The Geocoder::US package is a Ruby library that uses a database built from the
+US Census Bureau's TIGER/Line data to interpolate a latitude/longitude
+coordinate for a given US street address.
+
+Binary shared objects
+---------------------
+
+The Geocoder::US module depends on being able to load a native extension module
+in its SQLite driver. For this reason, a version of libsqlite-ruby >= 1.3.0 is
+needed. The module is built and included in the .deb as `sqlite.so`, and it is
+installed in the same directory as the Ruby modules. This may not be ideal, but
+this makes it easy for the Geocoder::US library to find it there; otherwise, a
+configuration option would be necessary.
+
+REST API server
+---------------
+
+The library's API centers on a single method 'geocode' to the
+Geocoder::US::Database class that takes an address string and returns a list of
+dicts containing the most likely matches with coordinates.
+
+The `geocode` method is wrapped in a very simple Sinatra application with a single
+endpoint `/geocode` and a single argument `q`, which returns the result of the
+geocode method in JSON format.
+
+The Sinatra web framework does not support running as a daemon on its own, so
+the Thin web server is used as a container for the application. This package
+creates an `/etc/geocoder-us` directory containing two files:
+
+`/etc/geocoder-us/geocoder.ru` is the "rackup" adapter between Thin and Sinatra
+and should probably not be changed. This file doesn't have to live in /etc, but
+I couldn't figure out where else to put it.
+
+`/etc/geocoder-us/thin.yml` contains the configuration options to run the Thin
+server. This file as packaged runs the REST server as the www-data user on port
+8080. This file *probably* doesn't need to be changed, but if the server starts
+doing weird things, different options to control Thin's behavior can be set
+here.
+
+The package creates `/var/log/geocoder-us` and `/var/run/geocoder-us`
+directories for the Thin log file and PID file, respectively, and chowns them
+to www-data.
+
+An init script is also included in `/etc/init.d/geocoder-us`. It is heavily
+hacked from the default Debian init.ex script to support the weirdnesses of
+Thin, but it is LSB compliant and supports the `status` command.
+
+Where to put the database
+-------------------------
+
+The location of the database file should be set in `/etc/default/geocoder-us`.
+The package creates a `/var/lib/geocoder-us` directory and configures the
+database location by default to be `/var/lib/geocoder-us/geocoder.db`. If you
+have an EBS volume containing a file called `geocoder.db`, for example, you can
+just mount the volume at `/var/lib/geocoder-us` and then start the server and
+all will be well.

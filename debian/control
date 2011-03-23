@@ -1,0 +1,14 @@
+Source: geocoder-us
+Section: ruby
+Priority: extra
+Maintainer: SimpleGeo Nerds <nerds@simplegeo.com>
+Uploaders: Schuyler Erle <schuyler@simplegeo.com>
+Build-Depends: debhelper (>= 7), libsqlite3-dev, ruby1.8, cdbs, ruby-pkg-tools
+Standards-Version: 3.8.4
+Homepage: http://github.com/simplegeo/geocoder/
+
+Package: geocoder-us
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, ruby1.8, libsqlite3-ruby (>= 1.3.0), libsinatra-ruby, libjson-ruby, thin
+Description: A US address geocoder.
+ A US address geocoder. Requires a suitable database.

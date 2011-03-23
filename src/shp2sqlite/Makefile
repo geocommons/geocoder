@@ -11,6 +11,7 @@
 # **********************************************************************
 
 CC=gcc
+
 CFLAGS=-g -O2  -fPIC -DPIC  -Wall -Wmissing-prototypes
 
 # Filenames with extension as determined by the OS
@@ -26,8 +27,8 @@ $(LIBLWGEOM):
 	make -C ../liblwgeom
 
 $(SHP2SQLITE): shpopen.o dbfopen.o getopt.o shp2sqlite.o $(LIBLWGEOM)
-	$(CC) -L/usr/local/libiconv/lib/ -liconv -I/usr/include $(CFLAGS) $^ $(ICONV_LDFLAGS) -lm -o $@
 
+	$(CC) -L/usr/local/libiconv/lib/ -liconv -I/usr/include $(CFLAGS) $^ $(ICONV_LDFLAGS) -lm -o $@
 
 install: all
 	@cp $(SHP2SQLITE) ../../bin

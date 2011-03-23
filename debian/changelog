@@ -1,0 +1,282 @@
+geocoder-us (2.0.1pre-1sg43) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a weird race condition when geocoding intersections.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 17 Feb 2011 22:11:48 +0000
+
+geocoder-us (2.0.1pre-1sg42) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Break tests to demonstrate Brooklyn/Manhattan regression.
+  * Fix Brooklyn/Manhattan regression. Hooray, test-driven development!
+  * Fix the "Mountain View, CA" bug where "normalizing" a street type in
+    a city name would prevent the city from getting removed from the
+    street parts in Address.city=.
+  * Add more tests to cover recent bugs.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 09 Feb 2011 22:37:07 +0000
+
+geocoder-us (2.0.1pre-1sg41) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Remove "Brooklyn, NY" as a place for ZIP 14729. Because that's
+    plainly WRONG.
+  * Pretty print output from CLI demo.
+  * Make all tests pass, post street side offset.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 04 Feb 2011 00:34:10 +0000
+
+geocoder-us (2.0.1pre-1sg39) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a NaN bug caused by some TIGER/Line from/to house numbers being
+    equal.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 12 Jan 2011 02:30:40 +0000
+
+geocoder-us (2.0.1pre-1sg38) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Don't run directly through thin; this causes segfaults on our Debian
+    systems.
+  * Remove thin configs.
+  * Go back to using embedded metaphone function, which will improve
+    result quality.
+  * Move the database open back out to the init step.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 12 Jan 2011 02:00:40 +0000
+
+geocoder-us (2.0.1pre-1sg37) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 04 Jan 2011 19:24:45 +0000
+
+geocoder-us (2.0.1pre-1sg36) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 23 Dec 2010 17:46:19 +0000
+
+geocoder-us (2.0.1pre-1sg35) lucid; urgency=low
+
+  [ dsmith ]
+  * Added a health endpoint to the geocoder
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 20 Dec 2010 19:08:59 +0000
+
+geocoder-us (2.0.1pre-1sg34) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 20 Dec 2010 17:39:41 +0000
+
+geocoder-us (2.0.1pre-1sg33) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Add street-side offsets of 7.5m by default.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 29 Nov 2010 23:12:51 +0000
+
+geocoder-us (2.0.1pre-1sg32) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 24 Nov 2010 22:20:44 +0000
+
+geocoder-us (2.0.1pre-1sg31) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 15 Nov 2010 19:35:15 +0000
+
+geocoder-us (2.0.1pre-1sg29) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 09 Nov 2010 21:28:24 +0000
+
+geocoder-us (2.0.1pre-1sg29) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Refactor rest.rb slightly for speed?
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 04 Nov 2010 21:54:45 +0000
+
+geocoder-us (2.0.1pre-1sg28) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * All-singing, all-dancing REST server.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 04 Nov 2010 19:18:25 +0000
+
+geocoder-us (2.0.1pre-1sg27) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Work around for segfaults in the Metaphone C code.
+  * Add Upstart config.
+  * Remove default and init script, start/stop in postinst/prerm.
+  * Fix up prerm and postinst scripts.
+  * Don't daemonize when running with Upstart.
+  * Tweak respawn rate.
+  * Load a new database handle on every request. Hrrr.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 04 Nov 2010 18:50:00 +0000
+
+geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 22:27:07 +0000
+
+geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 22:21:08 +0000
+
+geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 22:12:09 +0000
+
+geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 21:52:07 +0000
+
+geocoder-us (2.0.1pre-1sg21) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 21:18:23 +0000
+
+geocoder-us (2.0.1pre-1sg20) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 21:07:24 +0000
+
+geocoder-us (2.0.1pre-1sg19) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 20:57:25 +0000
+
+geocoder-us (2.0.1pre-1sg18) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 20:45:23 +0000
+
+geocoder-us (2.0.1pre-1sg17) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 20:35:26 +0000
+
+geocoder-us (2.0.1pre-1sg16) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 20:24:24 +0000
+
+geocoder-us (2.0.1pre-1sg15) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 01 Oct 2010 20:12:32 +0000
+
+geocoder-us (2.0.1pre-1sg14) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 22:18:36 +0000
+
+geocoder-us (2.0.1pre-1sg13) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 22:07:45 +0000
+
+geocoder-us (2.0.1pre-1sg12) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 21:56:56 +0000
+
+geocoder-us (2.0.1pre-1sg11) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 21:30:13 +0000
+
+geocoder-us (2.0.1pre-1sg10) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 20:58:14 +0000
+
+geocoder-us (2.0.1pre-1sg9) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 19:16:45 +0000
+
+geocoder-us (2.0.1pre-1sg3) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 30 Sep 2010 18:49:24 +0000
+
+geocoder-us (2.0.1pre-1sg2) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Build the SQLite extension.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 24 Aug 2010 20:39:11 +0000
+
+geocoder-us (2.0.1pre-1sg1) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Add source format.
+  * Build-depend on ruby1.8, build with CDBS, update standards-version.
+  * Strip +x bit from stuff that doesn't need it.
+  * Update copyright.
+  * Update mainteiners, fix section, add .
+  * Fix installation of  stuff in /var.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 24 Aug 2010 02:33:44 +0000
+
+geocoder-us (2.0.1pre-1sg0) unstable; urgency=low
+
+  * Initial release
+
+ -- Schuyler Erle <schuyler@simplegeo.com>  Sat, 07 Aug 2010 00:51:40 +0000

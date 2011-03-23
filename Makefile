@@ -6,8 +6,9 @@ test: all
 	ruby -Ilib tests/run.rb
 
 install: all
-	gem install *.gem
+	# gem install *.gem
 
 clean:
 	make -C src clean
-	rm *.gem
+	rm -f lib/geocoder/us/sqlite3.so
+	rm -f *.gem

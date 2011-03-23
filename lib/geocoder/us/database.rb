@@ -1,7 +1,7 @@
-require 'rubygems'
+# require 'rubygems'
 require 'sqlite3'
-require 'text'
-require 'levenshtein'
+# require 'text'
+# require 'levenshtein'
 
 require 'set'
 require 'pp'
@@ -9,6 +9,7 @@ require 'time'
 require 'thread'
 
 require 'geocoder/us/address'
+require 'geocoder/us/metaphone'
 
 module Geocoder
 end
@@ -55,37 +56,40 @@ module Geocoder::US
     # Load the SQLite extension and tune the database settings.
     # q.v. http://web.utk.edu/~jplyon/sqlite/SQLite_optimization_FAQ.html
     def tune (helper, cache_size)
+      if File.expand_path(helper) != helper
+        helper = File.join(File.dirname(__FILE__), helper)
+      end
       synchronize do
-        @db.create_function("levenshtein", 2) do |func, word1, word2|
-          test1, test2 = [word1, word2].map {|w|
-            w.to_s.gsub(/\W/o, "").downcase
-          }
-          dist = Levenshtein.distance(test1, test2)
-          result = dist.to_f / [test1.length, test2.length].max
-          func.set_result result 
-        end
-        @db.create_function("metaphone", 2) do |func, string, len|
-          test = string.to_s.gsub(/\W/o, "")
-          if test =~ /^(\d+)/o
-            mph = $1
-          elsif test =~ /^([wy])$/io
-            mph = $1
-          else
-            mph = Text::Metaphone.metaphone test
-          end
-          func.result = mph[0...len.to_i]
-        end
-        @db.create_function("nondigit_prefix", 1) do |func, string|
-          string.to_s =~ /^(.*\D)?(\d+)$/o
-          func.result = ($1 || "")
-        end
-        @db.create_function("digit_suffix", 1) do |func, string|
-          string.to_s =~ /^(.*\D)?(\d+)$/o
-          func.result = ($2 || "")
-        end
-        #@db.enable_load_extension(1)
-        #@db.load_extension(helper)
-        #@db.enable_load_extension(0)
+        # @db.create_function("levenshtein", 2) do |func, word1, word2|
+        #   test1, test2 = [word1, word2].map {|w|
+        #     w.to_s.gsub(/\W/o, "").downcase
+        #   }
+        #   dist = Levenshtein.distance(test1, test2)
+        #   result = dist.to_f / [test1.length, test2.length].max
+        #   func.set_result result 
+        # end
+        # @db.create_function("rb_metaphone", 2) do |func, string, len|
+        #  test = string.to_s.gsub(/\W/o, "")
+        #  if test =~ /^(\d+)/o
+        #    mph = $1
+        #  elsif test =~ /^([wy])$/io
+        #    mph = $1
+        #  else
+        #    mph = Text::Metaphone.metaphone test
+        #  end
+        #  func.result = mph[0...len.to_i]
+        # end
+        # @db.create_function("nondigit_prefix", 1) do |func, string|
+        #   string.to_s =~ /^(.*\D)?(\d+)$/o
+        #   func.result = ($1 || "")
+        # end
+        # @db.create_function("digit_suffix", 1) do |func, string|
+        #   string.to_s =~ /^(.*\D)?(\d+)$/o
+        #   func.result = ($2 || "")
+        # end
+        @db.enable_load_extension(1)
+        @db.load_extension(helper)
+        @db.enable_load_extension(0)
         @db.cache_size = cache_size
         @db.temp_store = "memory"
         @db.synchronous = "off"
@@ -149,7 +153,7 @@ module Geocoder::US
    
     def places_by_zip (city, zip)
       execute("SELECT *, levenshtein(?, city) AS city_score
-               FROM place WHERE zip = ? order by priority desc LIMIT 1;", city, zip)
+               FROM place WHERE zip = ? order by priority desc;", city, zip)
     end
 
     # Query the place table for by city, optional state, and zip.
@@ -168,7 +172,7 @@ module Geocoder::US
       end
       metaphones = metaphone_placeholders_for tokens
       execute("SELECT *, levenshtein(?, city) AS city_score
-                FROM place WHERE city_phone IN (#{metaphones}) #{and_state} order by priority desc LIMIT 1;", *args)
+                FROM place WHERE city_phone IN (#{metaphones}) #{and_state} order by priority desc;", *args)
     end
 
     # Generate an SQL query and set of parameters against the feature and range
@@ -204,7 +208,7 @@ module Geocoder::US
     def more_features_by_street_and_zip (street, tokens, zips)
       sql, params = features_by_street(street, tokens)
       if !zips.empty? and !zips[0].nil?
-        puts "zip results 2"
+        #puts "zip results 2"
         zip3s = zips.map {|z| z[0..2]+'%'}.to_set.to_a
         like_list = zip3s.map {|z| "feature.zip LIKE ?"}.join(" OR ")
         sql += " AND (#{like_list})"
@@ -265,6 +269,10 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
+      begin
+        execute "DROP TABLE intersection;"
+      rescue SQLite3::SQLException
+      end
       in_list = placeholders_for fids
       sql = "
         CREATE TEMPORARY TABLE intersection AS
@@ -288,7 +296,6 @@ module Geocoder::US
             AND f1.fid = a.fid AND f2.fid = b.fid
             AND f1.zip = f2.zip
             AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      execute "DROP TABLE intersection;"
       flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       results
     end
@@ -483,6 +490,9 @@ module Geocoder::US
         0.0
       elsif tohn < number
         1.0
+      elsif tohn == fromhn
+        # this is not supposed to happen, per Census Bureau rules, but apparently it does anyway.
+        0.0
       else
         (number - fromhn) / (tohn - fromhn).to_f
       end
@@ -529,9 +539,29 @@ module Geocoder::US
       Math.sqrt(dx ** 2 + dy ** 2)
     end
 
+    def street_side_offset (b, p1, p2)
+      # Find a point (x2, y2) that is at a distance b from a line A=(x0, y0)-(x1, y1)
+      # along a tangent B passing through (x1,y1)-(x2,y2).
+      # Let a = the length of line A
+      a = Math.sqrt((p2[0]-p1[0])**2.0 + (p2[1]-p1[1])**2.0)
+      # theta is the angle between the line A and the x axis
+      theta = Math.atan2(p2[1]-p1[1], p2[0]-p1[0])
+      # Now lines A and B form a right triangle where the third vertex is (x2, y2).
+      # Let c = the length of the hypotenuse line C=(x0,y0)-(x2,y2)
+      c = Math.sqrt(a**2.0 + b**2.0)
+      # Now alpha is the angle between lines A and C.
+      alpha = Math.atan2(b, a)
+      # Therefore the difference between theta and alpha is the angle between C and
+      # the x axis. Since we know the length of C, the lengths of the two lines
+      # parallel to the axes that form a right triangle C, and hence the
+      # coordinates (x2, y2), fall out.
+      return [p1[0] + c * Math.cos(theta - alpha), p1[1] + c * Math.sin(theta - alpha)]
+    end
+
     # Find an interpolated point along a list of linestring vertices
     # proportional to the given fractional distance along the line.
-    def interpolate (points, fraction)
+    # Offset is in degrees and defaults to ~8 meters.
+    def interpolate (points, fraction, side, offset=0.000075)
       $stderr.print "POINTS: #{points.inspect}" if @debug
       return points[0] if fraction == 0.0 
       return points[-1] if fraction == 1.0 
@@ -547,7 +577,7 @@ module Geocoder::US
           dx = (points[n][0] - points[n-1][0]) * (target/step) * scale
           dy = (points[n][1] - points[n-1][1]) * (target/step)
           found = [points[n-1][0]+dx, points[n-1][1]+dy]
-          return found.map {|x| format("%.6f", x).to_f}
+          return street_side_offset(offset*side, points[n-1], found)
         end
       end
      # raise "Can't happen!"
@@ -689,10 +719,15 @@ module Geocoder::US
       end
       candidates.map {|record|
         dist = interpolation_distance record
-        $stderr.print "DIST: #{dist}\n" if @debug
         points = unpack_geometry record[:geometry]
-        points.reverse! if record[:flipped]
-        record[:lon], record[:lat] = interpolate points, dist
+        side = (record[:side] == "R" ? 1 : -1)
+        if record[:flipped]
+          side *= -1
+          points.reverse!
+        end
+        $stderr.print "DIST: #{dist} FLIPPED: #{record[:flipped]} SIDE: #{side}\n" if @debug
+        found = interpolate points, dist, side
+        record[:lon], record[:lat] = found.map {|x| format("%.6f", x).to_f}
       }
       
       canonicalize_places! candidates if canonical_place

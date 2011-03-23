@@ -1,0 +1,95 @@
+GET /1.0/geocode/address.json
+
+The geocode/address endpoint returns the interpolated latitude and longitude of
+a US street address or street intersection. When given a US city or ZIP code,
+the approximate center point of that place will be returned instead.
+
+The geocoder attempts to return the most accurate possible result, including,
+where possible, correcting the given street type, city, or postal code, and
+identifying and correcting misspellings in the street or city name in the given
+address.
+
+Currently, address geocoding only works in the United States.
+
+Parameters:
+
+  q = a string containing a US street address.
+
+Returns a GeoJSON feature collection:
+
+    {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "number": "41",
+                    "street": "Decatur St",
+                    "city": "San Francisco",
+                    "state": "CA",
+                    "zip": "94103",
+                    "fips_county": "06075",
+                    "score": 1.0,
+                    "precision":"range"
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-122.406032, 37.772502]
+                }
+            }
+        ],
+        "address":"41 Decatur St, San Francisco CA 94103"
+    }
+
+
+Each address match in the feature collection contains some combination of the
+following properties:
+
+    number
+        The building number of the address. When a building number is not
+        included in a range stored in the address database, the nearest
+        known building number will be returned in its place.
+
+    street
+        The name of the street found in the database that matches the address,
+        given in a normalized form. 
+
+    street1 / street2
+        When an address is parsed as an intersection, the intersecting streets
+        are returned as `street1` and `street2` in place of the `number` and
+        `street` fields.
+
+    city
+        The city matching the given address. In the US, this is typically
+        determined from the matching ZIP code, so, for ZIP codes that cover
+        more than one named place, the results may be different from what you
+        expect, but will still be suitable for postal addressing.
+
+    state
+        The two letter postal abbreviation of the state containing the matching
+        address.
+
+    zip
+        In the US, the five digit ZIP code of the matching address.
+
+    plus4
+        In the US, the ZIP+4 extension parsed from the address, if any. This
+        extension is not actually used in the geocoding process, but is
+        returned for convenience.
+
+    fips_county
+        In the US, the FIPS 6-4 code of the county containing the address.
+
+    prenum / sufnum 
+        If the building number has a non-numeric prefix, it will be returned in
+        `prenum`. Ditto `sufnum` for non-numeric suffixes.
+
+    precision
+        The qualitative precision of the geocode. The value will be one of
+        `intersection`, 'range`, `street`, `zip`, or `city`.
+
+    score
+        The percentage of text match between the given address and the geocoded
+        result, expressed as a float between 0 and 1. A higher score indicates
+        a closer match. Results with a score below 0.5 should be regarded with
+        care.

@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/ruby-pkg-tools/1/class/ruby-setup-rb.mk
+
+
+# Add here any variable or target overrides you need.
+
+build/geocoder-us::
+	make -C $(CURDIR)/src/libsqlite3_geocoder
+	install -m 0644 $(CURDIR)/src/libsqlite3_geocoder/*.so \
+	$(CURDIR)/lib/geocoder/us/sqlite3.so
+
+install/geocoder-us::
+	install -d -m 0755 $(DEB_DESTDIR)var/lib/geocoder-us \
+		$(DEB_DESTDIR)var/run/geocoder-us \
+		$(DEB_DESTDIR)var/log/geocoder-us
+
