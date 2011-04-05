@@ -1,3 +1,14 @@
+geocoder-us (2.0.1pre-1sg45) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Throw a few more flush_statements in, because the call to DROP TABLE
+    seems to be wedging on "database table is locked" though who alone
+    knows why. Stupid SQLite. Grr.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 17:51:10 +0000
+
 geocoder-us (2.0.1pre-1sg44) lucid; urgency=low
 
   * UNRELEASED
