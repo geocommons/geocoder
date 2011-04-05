@@ -273,6 +273,7 @@ module Geocoder::US
       begin
         execute "DROP TABLE intersection;"
       rescue SQLite3::SQLException
+      rescue SQLite3::LockedException
       end
       flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       in_list = placeholders_for fids
