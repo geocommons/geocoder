@@ -101,7 +101,7 @@ module Geocoder::US
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
       synchronize do
-        @st[sql] ||= @db.prepare sql
+        @st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
       end
       return @st[sql]
     end
@@ -126,7 +126,6 @@ module Geocoder::US
       st = prepare(sql) 
       execute_statement st, *params
     end
-
     
     # Execute an SQLite statement object, bind the parameters,
     # map the column names to symbols, and return the rows
@@ -269,13 +268,11 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
-      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       begin
         execute "DROP TABLE intersection;"
       rescue SQLite3::SQLException
-      rescue SQLite3::LockedException
       end
-      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       in_list = placeholders_for fids
       sql = "
         CREATE TEMPORARY TABLE intersection AS
@@ -289,17 +286,22 @@ module Geocoder::US
               WHERE feature_edge.tlid = edge.tlid
               AND fid IN (#{in_list});
         CREATE INDEX intersect_pt_idx ON intersection (point);"
-      execute sql, *(fids + fids)
+      st = prepare sql
+      execute_statement st, *(fids + fids)
+      st.close
       # the a.fid < b.fid inequality guarantees consistent ordering of street
       # names in the output
-      results = execute "
+      sql = "
         SELECT a.fid AS fid1, b.fid AS fid2, a.point 
             FROM intersection a, intersection b, feature f1, feature f2
             WHERE a.point = b.point AND a.fid < b.fid
             AND f1.fid = a.fid AND f2.fid = b.fid
             AND f1.zip = f2.zip
             AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      st = prepare sql 
+      results = execute_statement st
+      st.close
+      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       results
     end
 
