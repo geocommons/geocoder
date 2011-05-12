@@ -29,7 +29,7 @@ $(SHP2SQLITE): shpopen.o dbfopen.o getopt.o shp2sqlite.o $(LIBLWGEOM)
 	$(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) -lm -o $@ 
 
 install: all
-	@cp $(SHP2SQLITE) ../../bin
+	@cp $(SHP2SQLITE) ../../build/
 
 clean:
 	@rm -f *.o $(SHP2SQLITE)
