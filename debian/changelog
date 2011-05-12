@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg51) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Try moving the temporary intersection table into a separate in-
+    memory database to eliminate locking contention.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 12 May 2011 19:17:24 +0000
+
 geocoder-us (2.0.1pre-1sg50) lucid; urgency=low
 
   * UNRELEASED
