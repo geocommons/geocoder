@@ -268,14 +268,16 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
+      temp_db = "temp_" + rand(1<<32).to_s
+      temp_table = "intersection_" + rand(1<<32).to_s
       begin
-        execute "DROP TABLE intersection;"
+        execute "ATTACH DATABASE ':memory:' as #{temp_db};"
       rescue SQLite3::SQLException
       end
       # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       in_list = placeholders_for fids
       sql = "
-        CREATE TEMPORARY TABLE intersection AS
+        CREATE TABLE #{temp_db}.#{temp_table} AS
           SELECT fid, substr(geometry,1,8) AS point
               FROM feature_edge, edge 
               WHERE feature_edge.tlid = edge.tlid
@@ -285,7 +287,7 @@ module Geocoder::US
               FROM feature_edge, edge 
               WHERE feature_edge.tlid = edge.tlid
               AND fid IN (#{in_list});
-        CREATE INDEX intersect_pt_idx ON intersection (point);"
+        CREATE INDEX #{temp_db}.#{temp_table}_pt_idx ON #{temp_table} (point);"
       st = prepare sql
       execute_statement st, *(fids + fids)
       st.close
@@ -293,7 +295,8 @@ module Geocoder::US
       # names in the output
       sql = "
         SELECT a.fid AS fid1, b.fid AS fid2, a.point 
-            FROM intersection a, intersection b, feature f1, feature f2
+            FROM #{temp_table} a, #{temp_table} b,
+                 feature f1, feature f2
             WHERE a.point = b.point AND a.fid < b.fid
             AND f1.fid = a.fid AND f2.fid = b.fid
             AND f1.zip = f2.zip
@@ -302,6 +305,10 @@ module Geocoder::US
       results = execute_statement st
       st.close
       # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      begin
+        execute "DETACH DATABASE #{temp_db};"
+      rescue SQLite3::SQLException
+      end
       results
     end
 
