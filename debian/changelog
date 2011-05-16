@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg53) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Update metaphones in place table.
+  * All tests now pass.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 16 May 2011 20:59:37 +0000
+
 geocoder-us (2.0.1pre-1sg52) lucid; urgency=low
 
   [ Schuyler Erle ]
