@@ -1,3 +1,70 @@
+geocoder-us (2.0.1pre-1sg51) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Try moving the temporary intersection table into a separate in-
+    memory database to eliminate locking contention.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 12 May 2011 19:17:24 +0000
+
+geocoder-us (2.0.1pre-1sg50) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 03 May 2011 00:09:08 +0000
+
+geocoder-us (2.0.1pre-1sg49) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 15 Apr 2011 21:31:56 +0000
+
+geocoder-us (2.0.1pre-1sg48) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 23:21:46 +0000
+
+geocoder-us (2.0.1pre-1sg47) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Slightly better: Explicitly close statements on the temporary
+    intersection table to release locks. Also checked cached statements
+    to see if they've been closed. This (hopefully) eliminates the need
+    to flush all statements after the table alteration.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 18:24:10 +0000
+
+geocoder-us (2.0.1pre-1sg46) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Oh, and trap SQLite3::LockedException, because maybe that'll
+    magically fix it.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 18:06:09 +0000
+
+geocoder-us (2.0.1pre-1sg45) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Throw a few more flush_statements in, because the call to DROP TABLE
+    seems to be wedging on "database table is locked" though who alone
+    knows why. Stupid SQLite. Grr.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 17:51:10 +0000
+
+geocoder-us (2.0.1pre-1sg44) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 29 Mar 2011 23:53:42 +0000
+
 geocoder-us (2.0.1pre-1sg43) lucid; urgency=low
 
   [ Schuyler Erle ]

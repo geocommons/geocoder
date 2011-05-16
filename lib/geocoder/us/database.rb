@@ -101,7 +101,7 @@ module Geocoder::US
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
       synchronize do
-        @st[sql] ||= @db.prepare sql
+        @st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
       end
       return @st[sql]
     end
@@ -126,7 +126,6 @@ module Geocoder::US
       st = prepare(sql) 
       execute_statement st, *params
     end
-
     
     # Execute an SQLite statement object, bind the parameters,
     # map the column names to symbols, and return the rows
@@ -269,13 +268,16 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
+      temp_db = "temp_" + rand(1<<32).to_s
+      temp_table = "intersection_" + rand(1<<32).to_s
       begin
-        execute "DROP TABLE intersection;"
+        execute "ATTACH DATABASE ':memory:' as #{temp_db};"
       rescue SQLite3::SQLException
       end
+      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       in_list = placeholders_for fids
       sql = "
-        CREATE TEMPORARY TABLE intersection AS
+        CREATE TABLE #{temp_db}.#{temp_table} AS
           SELECT fid, substr(geometry,1,8) AS point
               FROM feature_edge, edge 
               WHERE feature_edge.tlid = edge.tlid
@@ -285,18 +287,28 @@ module Geocoder::US
               FROM feature_edge, edge 
               WHERE feature_edge.tlid = edge.tlid
               AND fid IN (#{in_list});
-        CREATE INDEX intersect_pt_idx ON intersection (point);"
-      execute sql, *(fids + fids)
+        CREATE INDEX #{temp_db}.#{temp_table}_pt_idx ON #{temp_table} (point);"
+      st = prepare sql
+      execute_statement st, *(fids + fids)
+      st.close
       # the a.fid < b.fid inequality guarantees consistent ordering of street
       # names in the output
-      results = execute "
+      sql = "
         SELECT a.fid AS fid1, b.fid AS fid2, a.point 
-            FROM intersection a, intersection b, feature f1, feature f2
+            FROM #{temp_table} a, #{temp_table} b,
+                 feature f1, feature f2
             WHERE a.point = b.point AND a.fid < b.fid
             AND f1.fid = a.fid AND f2.fid = b.fid
             AND f1.zip = f2.zip
             AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      st = prepare sql 
+      results = execute_statement st
+      st.close
+      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+      begin
+        execute "DETACH DATABASE #{temp_db};"
+      rescue SQLite3::SQLException
+      end
       results
     end
 
