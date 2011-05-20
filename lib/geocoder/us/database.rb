@@ -101,9 +101,12 @@ module Geocoder::US
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
       synchronize do
-        @st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
+        # don't even bother cache SQL anymore, it seems to be messing things up
+        #@st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
+        st = @db.prepare sql
       end
-      return @st[sql]
+      # return @st[sql]
+      return st
     end
 
     def flush_statements
