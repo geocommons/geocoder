@@ -100,6 +100,7 @@ module Geocoder::US
     # it's not already in the cache.
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
+      st = nil
       synchronize do
         # don't even bother cache SQL anymore, it seems to be messing things up
         #@st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
