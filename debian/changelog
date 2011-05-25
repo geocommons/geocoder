@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg56) lucid; urgency=low
+
+  [ Paul Lathrop ]
+  * Fix upstart script so it creates a pidfile.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 25 May 2011 21:40:46 +0000
+
 geocoder-us (2.0.1pre-1sg55) lucid; urgency=low
 
   [ Schuyler Erle ]
