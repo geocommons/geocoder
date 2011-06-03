@@ -1,6 +1,7 @@
 require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
+require 'timeout'
 
 @@database_file = ARGV[0] || ENV["GEOCODER_DB"]
 
