@@ -2,15 +2,16 @@ require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
 
-@@db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
+@@database_file = ARGV[0] || ENV["GEOCODER_DB"]
 
 set :port, 8081
 get '/geocode' do
+  db = Geocoder::US::Database.new(@@database_file)
   if params[:q]
     results = []
     begin
       Timeout.timeout(1.0) do
-        results = @@db.geocode params[:q]
+        results = db.geocode params[:q]
       end
     rescue Timeout::Error
       $stderr.print "Timed out on '#{params[:q]}'\n"
