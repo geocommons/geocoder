@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg57) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Replace thin configs (undoing commit
+    2bd5dd8e9ae5210cd19692a4dfc557129ef07f58)
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 03 Jun 2011 22:40:48 +0000
+
 geocoder-us (2.0.1pre-1sg56) lucid; urgency=low
 
   [ Paul Lathrop ]
