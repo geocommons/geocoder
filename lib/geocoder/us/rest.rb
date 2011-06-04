@@ -10,6 +10,9 @@ get '/geocode' do
   if params[:q]
     results = []
     begin
+      # TODO: remove this Timeout call?
+      # Read this blog post to see why Timeout is very dangerous:
+      # http://blog.headius.com/2008/02/ruby-threadraise-threadkill-timeoutrb.html
       Timeout.timeout(1.0) do
         results = @@db.geocode params[:q]
       end
