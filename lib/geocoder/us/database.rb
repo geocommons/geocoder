@@ -274,10 +274,7 @@ module Geocoder::US
     def intersections_by_fid (fids)
       temp_db = "temp_" + rand(1<<32).to_s
       temp_table = "intersection_" + rand(1<<32).to_s
-      begin
-        execute "ATTACH DATABASE ':memory:' as #{temp_db};"
-      rescue SQLite3::SQLException
-      end
+      execute "ATTACH DATABASE ':memory:' as #{temp_db};"
       # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
       in_list = placeholders_for fids
       sql = "
@@ -309,10 +306,7 @@ module Geocoder::US
       results = execute_statement st
       st.close
       # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
-      begin
-        execute "DETACH DATABASE #{temp_db};"
-      rescue SQLite3::SQLException
-      end
+      execute "DETACH DATABASE #{temp_db};"
       results
     end
 
