@@ -1,3 +1,20 @@
+geocoder-us (2.0.1pre-1sg60) lucid; urgency=low
+
+  [ Wade Simmons ]
+  * Revert "Open a new database connection for every request." This
+    reverts commit 5a3e3dd5ea745f15482cb16b28b2d09a6753710d.
+
+  [ Wade Simmons and Derek Smith ]
+  * don't swallow exceptions when creating/destroying temporary
+    databases
+  * ensure that all prepared statements are closed, and make sure the
+    temporary databases are cleaned up if there is an exception
+  * add a TODO to possibly remove the Timeout.timeout
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sun, 05 Jun 2011 01:35:46 +0000
+
 geocoder-us (2.0.1pre-1sg59) lucid; urgency=low
 
   [ Schuyler Erle ]
