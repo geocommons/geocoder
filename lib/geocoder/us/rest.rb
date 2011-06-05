@@ -3,16 +3,18 @@ require 'geocoder/us/database'
 require 'json'
 require 'timeout'
 
-@@database_file = ARGV[0] || ENV["GEOCODER_DB"]
+@@db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
 
 set :port, 8081
 get '/geocode' do
-  db = Geocoder::US::Database.new(@@database_file)
   if params[:q]
     results = []
     begin
+      # TODO: remove this Timeout call?
+      # Read this blog post to see why Timeout is very dangerous:
+      # http://blog.headius.com/2008/02/ruby-threadraise-threadkill-timeoutrb.html
       Timeout.timeout(1.0) do
-        results = db.geocode params[:q]
+        results = @@db.geocode params[:q]
       end
     rescue Timeout::Error
       $stderr.print "Timed out on '#{params[:q]}'\n"

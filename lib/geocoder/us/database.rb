@@ -128,7 +128,11 @@ module Geocoder::US
     # return the result as a list of hashes.
     def execute (sql, *params)
       st = prepare(sql) 
-      execute_statement st, *params
+      begin
+        execute_statement st, *params
+      ensure
+        st.close
+      end
     end
     
     # Execute an SQLite statement object, bind the parameters,
@@ -217,8 +221,7 @@ module Geocoder::US
         sql += " AND (#{like_list})"
         params += zip3s
       end
-      st = @db.prepare sql
-      execute_statement st, *params
+      execute sql, *params
     end
 
     def ranges_by_feature (fids, number, prenum)
@@ -274,46 +277,38 @@ module Geocoder::US
     def intersections_by_fid (fids)
       temp_db = "temp_" + rand(1<<32).to_s
       temp_table = "intersection_" + rand(1<<32).to_s
+      execute "ATTACH DATABASE ':memory:' as #{temp_db};"
       begin
-        execute "ATTACH DATABASE ':memory:' as #{temp_db};"
-      rescue SQLite3::SQLException
-      end
-      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
-      in_list = placeholders_for fids
-      sql = "
-        CREATE TABLE #{temp_db}.#{temp_table} AS
-          SELECT fid, substr(geometry,1,8) AS point
-              FROM feature_edge, edge 
-              WHERE feature_edge.tlid = edge.tlid
-              AND fid IN (#{in_list})
-          UNION
-          SELECT fid, substr(geometry,length(geometry)-7,8) AS point
-              FROM feature_edge, edge 
-              WHERE feature_edge.tlid = edge.tlid
-              AND fid IN (#{in_list});
-        CREATE INDEX #{temp_db}.#{temp_table}_pt_idx ON #{temp_table} (point);"
-      st = prepare sql
-      execute_statement st, *(fids + fids)
-      st.close
-      # the a.fid < b.fid inequality guarantees consistent ordering of street
-      # names in the output
-      sql = "
-        SELECT a.fid AS fid1, b.fid AS fid2, a.point 
-            FROM #{temp_table} a, #{temp_table} b,
-                 feature f1, feature f2
-            WHERE a.point = b.point AND a.fid < b.fid
-            AND f1.fid = a.fid AND f2.fid = b.fid
-            AND f1.zip = f2.zip
-            AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      st = prepare sql 
-      results = execute_statement st
-      st.close
-      # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
-      begin
+        # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+        in_list = placeholders_for fids
+        sql = "
+          CREATE TABLE #{temp_db}.#{temp_table} AS
+            SELECT fid, substr(geometry,1,8) AS point
+                FROM feature_edge, edge 
+                WHERE feature_edge.tlid = edge.tlid
+                AND fid IN (#{in_list})
+            UNION
+            SELECT fid, substr(geometry,length(geometry)-7,8) AS point
+                FROM feature_edge, edge 
+                WHERE feature_edge.tlid = edge.tlid
+                AND fid IN (#{in_list});
+          CREATE INDEX #{temp_db}.#{temp_table}_pt_idx ON #{temp_table} (point);"
+        execute sql, *(fids + fids)
+        # the a.fid < b.fid inequality guarantees consistent ordering of street
+        # names in the output
+        sql = "
+          SELECT a.fid AS fid1, b.fid AS fid2, a.point 
+              FROM #{temp_table} a, #{temp_table} b,
+                   feature f1, feature f2
+              WHERE a.point = b.point AND a.fid < b.fid
+              AND f1.fid = a.fid AND f2.fid = b.fid
+              AND f1.zip = f2.zip
+              AND f1.paflag = 'P' AND f2.paflag = 'P';"
+        return execute sql
+      ensure
+        # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
         execute "DETACH DATABASE #{temp_db};"
-      rescue SQLite3::SQLException
       end
-      results
     end
 
     # Query the place table for notional "primary" place names for each of a
