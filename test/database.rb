@@ -137,8 +137,10 @@ class TestDatabase < Test::Unit::TestCase
            result = @db.geocode({:region => "VA", :street => "14333 Lee Jackson Memorial Hwy"})  
            #assert_equal result[0][:precision],:range
          end
-         
         
-         
+         def test_intersection
+          result = @db.geocode("Decatur St and Bryant St, San Francisco, CA 94103")
+          assert_equal result[0][:precision], :intersection
+         end
         
 end
