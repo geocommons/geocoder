@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg61) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Add test for intersections.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sun, 05 Jun 2011 01:56:46 +0000
+
 geocoder-us (2.0.1pre-1sg60) lucid; urgency=low
 
   [ Wade Simmons ]
