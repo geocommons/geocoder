@@ -1,4 +1,5 @@
 worker_processes 4
+user "www-data", "www-data"
 listen "/var/run/geocoder-us/unicorn.sock", :backlog => 64
 pid "/var/run/geocoder-us/unicorn.pid"
 stderr_path "/var/log/geocoder-us/geocoder-err.log"
