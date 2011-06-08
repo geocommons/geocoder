@@ -1,24 +1,13 @@
 require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
-require 'timeout'
 
 @@db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
 
 set :port, 8081
 get '/geocode' do
   if params[:q]
-    results = []
-    begin
-      # TODO: remove this Timeout call?
-      # Read this blog post to see why Timeout is very dangerous:
-      # http://blog.headius.com/2008/02/ruby-threadraise-threadkill-timeoutrb.html
-      Timeout.timeout(1.0) do
-        results = @@db.geocode params[:q]
-      end
-    rescue Timeout::Error
-      $stderr.print "Timed out on '#{params[:q]}'\n"
-    end
+    results = @@db.geocode params[:q]
     features = []
     results.each do |result|
       coords = [result.delete(:lon), result.delete(:lat)]
