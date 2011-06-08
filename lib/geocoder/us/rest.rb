@@ -2,7 +2,7 @@ require 'sinatra'
 require 'geocoder/us/database'
 require 'json'
 
-@@db = Geocoder::US::Database.new(ARGV[0] || ENV["GEOCODER_DB"])
+@@db = Geocoder::US::Database.new(ENV["GEOCODER_DB"] || ARGV[0])
 
 set :port, 8081
 get '/geocode' do
@@ -32,12 +32,12 @@ get '/geocode' do
         :features => features
       }.to_json
     rescue JSON::GeneratorError
-      { 
+      {
         :type => "FeatureCollection",
         :error => "JSON::GeneratorError",
         :features => []
       }.to_json
-    end 
+    end
   else
     status 400
     "parameter 'q' is missing"
