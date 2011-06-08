@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg63) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Remove Timeout block from geocode endpoint for being generally
+    unsafe. The timeout can happen elsewhere (e.g. Unicorn or Gate).
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 08 Jun 2011 22:45:46 +0000
+
 geocoder-us (2.0.1pre-1sg62) lucid; urgency=low
 
   [ Paul Lathrop ]
