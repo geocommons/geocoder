@@ -1,0 +1,6 @@
+# Defaults for geocoder-us upstart job
+# sourced by /etc/init/geocoder-us.conf
+# installed at /etc/default/geocoder-us by maintainer scripts
+
+# Set the location of the geocoder database.
+export GEOCODER_DB="/var/lib/geocoder-us/geocoder.db"
