@@ -1,3 +1,21 @@
+geocoder-us (2.0.1pre-1sg62) lucid; urgency=low
+
+  [ Paul Lathrop ]
+  * Load the geocoder database location from the env first, then argv.
+    This is not optimal, because it makes sense to have the command-line
+    over-ride the environment, however when we run this under unicorn,
+    argv[0] is set to something that is *not* a database location.
+  * Remove cruft.
+  * Use unicorn to run the geocoder.
+  * Don't run as root.
+  * Reverting "Remove cruft." Resurrect these files I shouldn't have
+    deleted. This reverts commit
+    434f9d3aa40e71a20b5d2cf9b8dad1802282957a.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 08 Jun 2011 22:10:48 +0000
+
 geocoder-us (2.0.1pre-1sg61) lucid; urgency=low
 
   [ Schuyler Erle ]
