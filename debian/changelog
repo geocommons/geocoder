@@ -1,3 +1,12 @@
+geocoder-us (2.0.1pre-1sg65) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a bug in edge interpolation caused by zero-length segments.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 16 Jun 2011 22:18:47 +0000
+
 geocoder-us (2.0.1pre-1sg64) lucid; urgency=low
 
   [ Paul Lathrop ]
