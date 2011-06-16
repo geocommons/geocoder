@@ -571,6 +571,7 @@ module Geocoder::US
       (1...points.length).each {|n| total += distance(points[n-1], points[n])}
       target = total * fraction
       for n in 1...points.length
+        next if points[n-1] == points[n] # because otherwise step==0 and dx/dy==NaN
         step = distance(points[n-1], points[n])
         if step < target
           target -= step
@@ -582,7 +583,9 @@ module Geocoder::US
           return street_side_offset(offset*side, points[n-1], found)
         end
       end
-     # raise "Can't happen!"
+      # in a pathological case, points[n-1] == points[n] for n==-1
+      # so *sigh* just forget interpolating and return points[-1]
+      return points[-1]
     end
 
     # Find and replace the city, state, and county information
