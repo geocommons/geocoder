@@ -233,7 +233,7 @@ module Geocoder::US
     "Hiway"			=> "Hwy",
     "Hiwy"			=> "Hwy",
     "Hway"			=> "Hwy",
-    "La"			=> "Ln",
+    #"La"			=> "Ln", # causes problems with Spanglish place names
     "Lanes"			=> "Ln",
     "Loops"			=> "Loop",
     "Plza"			=> "Plz",
