@@ -1,3 +1,13 @@
+geocoder-us (2.0.1pre-1sg66) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Remove "la" from feature type affixes, because it probably is used
+    less frequently then "La" as part of a Spanish place name.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sat, 18 Jun 2011 19:06:47 +0000
+
 geocoder-us (2.0.1pre-1sg65) lucid; urgency=low
 
   [ Schuyler Erle ]
