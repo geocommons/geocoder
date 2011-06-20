@@ -5,6 +5,7 @@ require 'geocoder/us/database'
 require 'csv'
 
 Base = File.dirname(__FILE__)
+Debug = false
 
 module Geocoder::US
   Database_File = (
@@ -13,8 +14,7 @@ end
 
 class TestDatabase < Test::Unit::TestCase
   def get_db
-    Geocoder::US::Database.new(Geocoder::US::Database_File, {:debug => true})
-
+    Geocoder::US::Database.new(Geocoder::US::Database_File, {:debug => Debug})
   end
   
   # def get_international_db
@@ -36,7 +36,7 @@ class TestDatabase < Test::Unit::TestCase
   def test_zip
       return if @db.nil?
       [ {:city=>"Chicago", :zip=>"60601", :state=>"IL", :precision=>:zip,
-         :fips_county=>"17031", :lon=>-87.68732, :lat=>41.811929, :score => 0.714},
+         :fips_county=>"17031", :lon=>-87.622130,:lat=>41.885310, :score => 0.714},
         {:city=>"Philadelphia", :zip=>"19019", :state=>"PA", :precision=>:zip,
          :fips_county=>"42101", :lon=>-75.11787, :lat=>40.001811, :score => 0.714}
       ].each {|record|
@@ -137,8 +137,10 @@ class TestDatabase < Test::Unit::TestCase
            result = @db.geocode({:region => "VA", :street => "14333 Lee Jackson Memorial Hwy"})  
            #assert_equal result[0][:precision],:range
          end
-         
         
-         
+         def test_intersection
+          result = @db.geocode("Decatur St and Bryant St, San Francisco, CA 94103")
+          assert_equal result[0][:precision], :intersection
+         end
         
 end

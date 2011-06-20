@@ -100,10 +100,14 @@ module Geocoder::US
     # it's not already in the cache.
     def prepare (sql)
       $stderr.print "SQL : #{sql}\n" if @debug
+      st = nil
       synchronize do
-        @st[sql] ||= @db.prepare sql
+        # don't even bother cache SQL anymore, it seems to be messing things up
+        #@st[sql] = @db.prepare sql if not @st[sql] or @st[sql].closed?
+        st = @db.prepare sql
       end
-      return @st[sql]
+      # return @st[sql]
+      return st
     end
 
     def flush_statements
@@ -124,9 +128,12 @@ module Geocoder::US
     # return the result as a list of hashes.
     def execute (sql, *params)
       st = prepare(sql) 
-      execute_statement st, *params
+      begin
+        execute_statement st, *params
+      ensure
+        st.close
+      end
     end
-
     
     # Execute an SQLite statement object, bind the parameters,
     # map the column names to symbols, and return the rows
@@ -214,8 +221,7 @@ module Geocoder::US
         sql += " AND (#{like_list})"
         params += zip3s
       end
-      st = @db.prepare sql
-      execute_statement st, *params
+      execute sql, *params
     end
 
     def ranges_by_feature (fids, number, prenum)
@@ -269,35 +275,40 @@ module Geocoder::US
     end
 
     def intersections_by_fid (fids)
+      temp_db = "temp_" + rand(1<<32).to_s
+      temp_table = "intersection_" + rand(1<<32).to_s
+      execute "ATTACH DATABASE ':memory:' as #{temp_db};"
       begin
-        execute "DROP TABLE intersection;"
-      rescue SQLite3::SQLException
+        # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+        in_list = placeholders_for fids
+        sql = "
+          CREATE TABLE #{temp_db}.#{temp_table} AS
+            SELECT fid, substr(geometry,1,8) AS point
+                FROM feature_edge, edge 
+                WHERE feature_edge.tlid = edge.tlid
+                AND fid IN (#{in_list})
+            UNION
+            SELECT fid, substr(geometry,length(geometry)-7,8) AS point
+                FROM feature_edge, edge 
+                WHERE feature_edge.tlid = edge.tlid
+                AND fid IN (#{in_list});
+          CREATE INDEX #{temp_db}.#{temp_table}_pt_idx ON #{temp_table} (point);"
+        execute sql, *(fids + fids)
+        # the a.fid < b.fid inequality guarantees consistent ordering of street
+        # names in the output
+        sql = "
+          SELECT a.fid AS fid1, b.fid AS fid2, a.point 
+              FROM #{temp_table} a, #{temp_table} b,
+                   feature f1, feature f2
+              WHERE a.point = b.point AND a.fid < b.fid
+              AND f1.fid = a.fid AND f2.fid = b.fid
+              AND f1.zip = f2.zip
+              AND f1.paflag = 'P' AND f2.paflag = 'P';"
+        return execute sql
+      ensure
+        # flush_statements # the CREATE/DROP TABLE invalidates prepared statements
+        execute "DETACH DATABASE #{temp_db};"
       end
-      in_list = placeholders_for fids
-      sql = "
-        CREATE TEMPORARY TABLE intersection AS
-          SELECT fid, substr(geometry,1,8) AS point
-              FROM feature_edge, edge 
-              WHERE feature_edge.tlid = edge.tlid
-              AND fid IN (#{in_list})
-          UNION
-          SELECT fid, substr(geometry,length(geometry)-7,8) AS point
-              FROM feature_edge, edge 
-              WHERE feature_edge.tlid = edge.tlid
-              AND fid IN (#{in_list});
-        CREATE INDEX intersect_pt_idx ON intersection (point);"
-      execute sql, *(fids + fids)
-      # the a.fid < b.fid inequality guarantees consistent ordering of street
-      # names in the output
-      results = execute "
-        SELECT a.fid AS fid1, b.fid AS fid2, a.point 
-            FROM intersection a, intersection b, feature f1, feature f2
-            WHERE a.point = b.point AND a.fid < b.fid
-            AND f1.fid = a.fid AND f2.fid = b.fid
-            AND f1.zip = f2.zip
-            AND f1.paflag = 'P' AND f2.paflag = 'P';"
-      flush_statements # the CREATE/DROP TABLE invalidates prepared statements
-      results
     end
 
     # Query the place table for notional "primary" place names for each of a
@@ -569,6 +580,7 @@ module Geocoder::US
       (1...points.length).each {|n| total += distance(points[n-1], points[n])}
       target = total * fraction
       for n in 1...points.length
+        next if points[n-1] == points[n] # because otherwise step==0 and dx/dy==NaN
         step = distance(points[n-1], points[n])
         if step < target
           target -= step
@@ -580,7 +592,9 @@ module Geocoder::US
           return street_side_offset(offset*side, points[n-1], found)
         end
       end
-     # raise "Can't happen!"
+      # in a pathological case, points[n-1] == points[n] for n==-1
+      # so *sigh* just forget interpolating and return points[-1]
+      return points[-1]
     end
 
     # Find and replace the city, state, and county information

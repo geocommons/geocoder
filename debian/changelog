@@ -1,3 +1,229 @@
+geocoder-us (2.0.1pre-1sg66) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Remove "la" from feature type affixes, because it probably is used
+    less frequently then "La" as part of a Spanish place name.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sat, 18 Jun 2011 19:06:47 +0000
+
+geocoder-us (2.0.1pre-1sg65) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix a bug in edge interpolation caused by zero-length segments.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 16 Jun 2011 22:18:47 +0000
+
+geocoder-us (2.0.1pre-1sg64) lucid; urgency=low
+
+  [ Paul Lathrop ]
+  * Fix upstart job.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 08 Jun 2011 23:57:47 +0000
+
+geocoder-us (2.0.1pre-1sg63) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Remove Timeout block from geocode endpoint for being generally
+    unsafe. The timeout can happen elsewhere (e.g. Unicorn or Gate).
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 08 Jun 2011 22:45:46 +0000
+
+geocoder-us (2.0.1pre-1sg62) lucid; urgency=low
+
+  [ Paul Lathrop ]
+  * Load the geocoder database location from the env first, then argv.
+    This is not optimal, because it makes sense to have the command-line
+    over-ride the environment, however when we run this under unicorn,
+    argv[0] is set to something that is *not* a database location.
+  * Remove cruft.
+  * Use unicorn to run the geocoder.
+  * Don't run as root.
+  * Reverting "Remove cruft." Resurrect these files I shouldn't have
+    deleted. This reverts commit
+    434f9d3aa40e71a20b5d2cf9b8dad1802282957a.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 08 Jun 2011 22:10:48 +0000
+
+geocoder-us (2.0.1pre-1sg61) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Add test for intersections.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sun, 05 Jun 2011 01:56:46 +0000
+
+geocoder-us (2.0.1pre-1sg60) lucid; urgency=low
+
+  [ Wade Simmons ]
+  * Revert "Open a new database connection for every request." This
+    reverts commit 5a3e3dd5ea745f15482cb16b28b2d09a6753710d.
+
+  [ Wade Simmons and Derek Smith ]
+  * don't swallow exceptions when creating/destroying temporary
+    databases
+  * ensure that all prepared statements are closed, and make sure the
+    temporary databases are cleaned up if there is an exception
+  * add a TODO to possibly remove the Timeout.timeout
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Sun, 05 Jun 2011 01:35:46 +0000
+
+geocoder-us (2.0.1pre-1sg59) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Fix missing require timeout?
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 03 Jun 2011 22:57:47 +0000
+
+geocoder-us (2.0.1pre-1sg58) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Open a new database connection for every request.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 03 Jun 2011 22:49:47 +0000
+
+geocoder-us (2.0.1pre-1sg57) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Replace thin configs (undoing commit
+    2bd5dd8e9ae5210cd19692a4dfc557129ef07f58)
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 03 Jun 2011 22:40:48 +0000
+
+geocoder-us (2.0.1pre-1sg56) lucid; urgency=low
+
+  [ Paul Lathrop ]
+  * Fix upstart script so it creates a pidfile.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 25 May 2011 21:40:46 +0000
+
+geocoder-us (2.0.1pre-1sg55) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Bug fix the previous commit.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 20 May 2011 00:32:48 +0000
+
+geocoder-us (2.0.1pre-1sg54) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Don't cache statements anymore.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 20 May 2011 00:18:47 +0000
+
+geocoder-us (2.0.1pre-1sg53) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Update metaphones in place table.
+  * All tests now pass.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 16 May 2011 20:59:37 +0000
+
+geocoder-us (2.0.1pre-1sg52) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Update tiger_import for TIGER/Line 2010.
+  * Remove obvious place duplicates.
+  * Update places for 2010 using TIGER/Line and Geonames.
+  * Final update to new place database.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 16 May 2011 19:34:35 +0000
+
+geocoder-us (2.0.1pre-1sg51) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Try moving the temporary intersection table into a separate in-
+    memory database to eliminate locking contention.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 12 May 2011 19:17:24 +0000
+
+geocoder-us (2.0.1pre-1sg50) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 03 May 2011 00:09:08 +0000
+
+geocoder-us (2.0.1pre-1sg49) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 15 Apr 2011 21:31:56 +0000
+
+geocoder-us (2.0.1pre-1sg48) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 23:21:46 +0000
+
+geocoder-us (2.0.1pre-1sg47) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Slightly better: Explicitly close statements on the temporary
+    intersection table to release locks. Also checked cached statements
+    to see if they've been closed. This (hopefully) eliminates the need
+    to flush all statements after the table alteration.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 18:24:10 +0000
+
+geocoder-us (2.0.1pre-1sg46) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Oh, and trap SQLite3::LockedException, because maybe that'll
+    magically fix it.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 18:06:09 +0000
+
+geocoder-us (2.0.1pre-1sg45) lucid; urgency=low
+
+  [ Schuyler Erle ]
+  * Throw a few more flush_statements in, because the call to DROP TABLE
+    seems to be wedging on "database table is locked" though who alone
+    knows why. Stupid SQLite. Grr.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 05 Apr 2011 17:51:10 +0000
+
+geocoder-us (2.0.1pre-1sg44) lucid; urgency=low
+
+  * UNRELEASED
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 29 Mar 2011 23:53:42 +0000
+
 geocoder-us (2.0.1pre-1sg43) lucid; urgency=low
 
   [ Schuyler Erle ]
