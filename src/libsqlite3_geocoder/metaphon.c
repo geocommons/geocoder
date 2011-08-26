@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <string.h> /* strlen() */
 #include <stdio.h>
+#include <sqlite3.h>
 #define malloc(x) sqlite3_malloc((x))
 #define free(x) sqlite3_free((x))
 

@@ -25,7 +25,7 @@ if [ x"$1" != x"" ]; then
     cat
 else
     # Otherwise, find all of the IDs from the contents of the directory structure.
-    ls $SOURCE/**/tl_*_edges.zip | while read file; do
+    ls $SOURCE/*/*/tl_*_edges.zip | while read file; do
         file=$(basename $file)
         code=${file##tl_????_}
         echo ${code%%_edges.zip}
@@ -34,8 +34,8 @@ fi | sort | while read code; do
     echo "--- $code"
     # Unpack the county files into the temp directory.
     for file in $SHPS $DBFS; do
-	ZIP=$(ls $SOURCE/**/*_${code}_${file}.zip 2>/dev/null)
-	SHP=$(ls $SOURCE/**/*_${code}_${file}.* 2>/dev/null)
+	ZIP=$(ls $SOURCE/*/*/*_${code}_${file}.zip 2>/dev/null)
+	SHP=$(ls $SOURCE/*/*/*_${code}_${file}.* 2>/dev/null)
 	if [ x"$ZIP" != x"" ]; then
 	    unzip -q $ZIP -d $TMP
 	elif [ x"$SHP" != x"" ]; then
