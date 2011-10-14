@@ -118,7 +118,7 @@ downloading the TIGER/Line dataset, if you are building the full database.
 
 From inside the Geocoder::US source tree, run the following:
 
-  $ bin/tiger_import /opt/tiger/geocoder.db /opt/tiger
+  $ build/tiger_import /opt/tiger/geocoder.db /opt/tiger
 
 This will unpack each TIGER/Line ZIP file to a temporary directory, and
 perform the extract/transform/load sequence to incrementally build the
@@ -131,7 +131,7 @@ If you only want to import specific counties, you can pipe a list of
 TIGER/Line county directories to tiger_import on stdin. For example,
 the following will install just the data for the state of Delaware:
 
-  $ ls -d /opt/tiger/10_DELAWARE/1* | bin/tiger_import ~/delaware.db
+  $ ls -d /opt/tiger/10_DELAWARE/1* | build/tiger_import ~/delaware.db
 
 The tiger_import process uses a binary utility, shp2sqlite, which is derived
 from shp2pgsql, which ships with PostGIS. The shp2sqlite utility converts
@@ -152,7 +152,7 @@ This creates the metaphones using Ruby's metaphone function and will produce bet
 After the database import is complete, you will want to construct the database
 indexes:
 
-  $ bin/build_indexes /opt/tiger/geocoder.db
+  $ build/build_indexes /opt/tiger/geocoder.db
 
 This process takes 25 minutes on an EC2 instance (8 CPU minutes), but it's a
 *lot* faster than building the indexes incrementally during the import
@@ -165,7 +165,7 @@ As a final optional step, you can cluster the database tables according to
 their indexes, which will make the database smaller, and lookups faster. This
 process will take an hour or two, and may be a micro-optimization.
 
-  $ bin/rebuild_cluster /opt/tiger/geocoder.db
+  $ build/rebuild_cluster /opt/tiger/geocoder.db
 
 You will need as much free disk space to run rebuild_cluster as the database
 takes up, because the process essentially reconstructs the database in a new
