@@ -29,15 +29,20 @@ module Geocoder::US
     # directory as database.rb by default. The cache_size argument is
     # measured in kilobytes and is used to set the SQLite cache size; larger
     # values will trade memory for speed in long-running processes.
+    # dbtype option is used when your datasbase encodes it's geometry blogs according to two formats
+    # the first. default, is in a series of little-endian 4-byte ints. The second is
+    # | 1 byte Type | 4 byte SRID | 4 byte element count| 8 byte double coordinates. Use option value 2 for this
+    # second type
     def initialize (filename, options = {})
       defaults = {:debug => false, :cache_size => 50000,
                   :helper => "sqlite3.so", :threadsafe => false,
-                  :create => false}
+                  :create => false, :dbtype => 1}
       options = defaults.merge options
       raise ArgumentError, "can't find database #{filename}" \
         unless options[:create] or File.exists? filename
       @db = SQLite3::Database.new( filename )
       @st = {}
+      @dbtype = options[:dbtype]
       @debug = options[:debug]
       @threadsafe = options[:threadsafe]
       tune options[:helper], options[:cache_size]
@@ -514,21 +519,19 @@ module Geocoder::US
     # compress_wkb_line() function in the SQLite helper extension.
     def unpack_geometry (geom)
       points = []
-      if !geom.nil?
-	# Pete - The database format is completely different to the one
-	# expected by the code, so I've done some detective work to
-	# figure out what it should be. It looks like the format is
-	# | 1 byte Type | 4 byte SRID | 4 byte element count| 8 byte double coordinates *
-	# I've added new code to read this, and commented out the old.
-	info = geom.unpack('CVVD*')
-	coords = info.slice(3, info.length)
-	points << [coords.shift, coords.shift] until coords.empty?
-
-      #  coords = geom.unpack "V*" # little-endian 4-byte long ints
-      #
-      ## now map them into signed floats
-      #  coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
-      #  points << [coords.shift, coords.shift] until coords.empty?
+      if !geom.nil?       
+        if @dbtype == 2
+          # For special case?
+          #| 1 byte Type | 4 byte SRID | 4 byte element count| 8 byte double coordinates *
+          info = geom.unpack('CVVD*')
+          coords = info.slice(3, info.length)
+        else
+          #old format
+          coords = geom.unpack "V*" # little-endian 4-byte long ints
+          ## now map them into signed floats
+          coords.map! {|i| ( i > (1 << 31) ? i - (1 << 32) : i ) / 1_000_000.0}
+        end
+        points << [coords.shift, coords.shift] until coords.empty?
       end
       points
     end

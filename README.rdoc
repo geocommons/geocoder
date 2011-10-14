@@ -26,6 +26,20 @@ public domain sources.
     :precision=>:range, :city=>"Washington", :lat=>38.898746, :suftyp=>"Ave",
     :state=>"DC", :prequal=>"", :sufqual=>"", :score=>0.906, :prenum=>""}]
 
+== Optional Options
+
+dbtype Geocoder::US::Database.new("/opt/tiger/geocoder.db", {:dbtype => 1})
+
+The dbtype option is used when your datasbase encodes it's geometry blogs according to a special format. The
+first and default value, is in a series of little-endian 4-byte ints ("V*")
+The second is for ('CVVD*') format. Use option value 2 for this second type
+
+debug  Geocoder::US::Database.new("/opt/tiger/geocoder.db", {:debug => false})
+
+cache Geocoder::US::Database.new("/opt/tiger/geocoder.db", {:cache => 50000})
+The cache_size argument is measured in kilobytes and is used to set the SQLite cache size;
+ larger values will trade memory for speed in long-running processes.
+
 == Prerequisites
 
 To build Geocoder::US, you will need gcc/g++, make, bash or equivalent, the
