@@ -7,6 +7,7 @@ BASE=$(dirname $0)
 PATH=$PATH:$BASE
 SQL="$BASE/sql"
 HELPER_LIB="$BASE/../lib/geocoder/us/sqlite3.so"
+SHP2SQLITE=../src/shp2sqlite/shp2sqlite 
 DATABASE=$1
 SOURCE=$2
 shift
@@ -15,8 +16,9 @@ shift
 mkdir -p $TMP || exit 1
 
 # Initialize the database if it doesn't exist.
-#[ ! -r $DATABASE ] && cat ${SQL}/{create,place}.sql | sqlite3 $DATABASE
-[ ! -r $DATABASE ] && cat ${SQL}/create.sql | sqlite3 $DATABASE
+# Added places back in after adding the "drop if exists" directive to the SQL file. theduckylittle, 2011/12/15
+[ ! -r $DATABASE ] && cat ${SQL}/{create,place}.sql | sqlite3 $DATABASE
+#[ ! -r $DATABASE ] && cat ${SQL}/create.sql | sqlite3 $DATABASE
  
 # Marshal the county directories to import.
 #
@@ -25,7 +27,7 @@ if [ x"$1" != x"" ]; then
     cat
 else
     # Otherwise, find all of the IDs from the contents of the directory structure.
-    ls $SOURCE/*/*/tl_*_edges.zip | while read file; do
+    ls $SOURCE/tl_*_edges.zip | while read file; do
         file=$(basename $file)
         code=${file##tl_????_}
         echo ${code%%_edges.zip}
@@ -34,8 +36,8 @@ fi | sort | while read code; do
     echo "--- $code"
     # Unpack the county files into the temp directory.
     for file in $SHPS $DBFS; do
-	ZIP=$(ls $SOURCE/*/*/*_${code}_${file}.zip 2>/dev/null)
-	SHP=$(ls $SOURCE/*/*/*_${code}_${file}.* 2>/dev/null)
+	ZIP=$(ls $SOURCE/*_${code}_${file}.zip 2>/dev/null)
+	SHP=$(ls $SOURCE/*_${code}_${file}.* 2>/dev/null)
 	if [ x"$ZIP" != x"" ]; then
 	    unzip -q $ZIP -d $TMP
 	elif [ x"$SHP" != x"" ]; then
@@ -49,7 +51,7 @@ fi | sort | while read code; do
      cat ${SQL}/setup.sql && \
      for file in $SHPS; do
        # Convert each Shapefile into SQL statements.
-       shp2sqlite -aS ${TMP}/*_${file}.shp tiger_${file}
+	${SHP2SQLITE} -aS ${TMP}/*_${file}.shp tiger_${file}
      done && \
      for file in $DBFS; do
        # Convert each DBF into SQL statements likewise.
