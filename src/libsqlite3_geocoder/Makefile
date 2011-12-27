@@ -19,3 +19,7 @@ test_levenshtein: levenshtein.c
 
 clean:
 	rm -f *.o *.so wkb_compress levenshtein
+
+install:
+	cp *.so ../../lib/geocoder/us/sqlite3.so
+
