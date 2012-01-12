@@ -9,6 +9,10 @@
 # * the terms of the GNU General Public Licence. See the COPYING file.
 # *
 # **********************************************************************
+#
+# This Makefile was modified by theduckylittle to build on Mac OS/X
+# with Iconv installed using brew. YMMV using ports and fink.
+#
 
 CC=gcc
 
@@ -19,7 +23,8 @@ SHP2SQLITE=shp2sqlite
 LIBLWGEOM=../liblwgeom/liblwgeom.a
 
 # iconv flags
-ICONV_LDFLAGS=-lc
+ICONV_LDFLAGS=-I/usr/local/Cellar/libiconv/1.14/include/ -L/usr/local/Cellar/libiconv/1.14/lib/ 
+ICONV_LDFLAGS=-liconv -lc
 
 all: $(SHP2SQLITE)
 
@@ -27,8 +32,7 @@ $(LIBLWGEOM):
 	make -C ../liblwgeom
 
 $(SHP2SQLITE): shpopen.o dbfopen.o getopt.o shp2sqlite.o $(LIBLWGEOM)
-
-	$(CC) -I/usr/include $(CFLAGS) $^ $(ICONV_LDFLAGS) -lm -o $@
+	$(CC) $(CFLAGS) $(ICONV_LDFLAGS) -lm $^ -o $@
 
 install: all
 	@cp $(SHP2SQLITE) ../../build/
