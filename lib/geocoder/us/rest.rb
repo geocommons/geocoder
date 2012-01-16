@@ -94,8 +94,8 @@ __END__
   
 :javascript
   var map = new L.Map('map');
-  var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png',
-      cloudmadeAttrib = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+  var cloudmadeUrl = 'http://acetate.geoiq.com/tiles/acetate/{z}/{x}/{y}.png',
+      cloudmadeAttrib = 'Map data &copy; 2011 OpenStreetMap contributors, Style &copy; 2011 GeoIQ',
       cloudmade = new L.TileLayer(cloudmadeUrl, {maxZoom: 18, attribution: cloudmadeAttrib});
   var center = new L.LatLng(#{@features.first[:geometry][:coordinates][1]}, #{@features.first[:geometry][:coordinates][0]});
   map.setView(center, 13).addLayer(cloudmade);
