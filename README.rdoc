@@ -31,6 +31,16 @@ by Dan "Ducky" Little (GitHub: theduckylittle, dan.little-at-excensus-dot-com).
     :precision=>:range, :city=>"Washington", :lat=>38.898746, :suftyp=>"Ave",
     :state=>"DC", :prequal=>"", :sufqual=>"", :score=>0.906, :prenum=>""}]
 
+== Web service
+
+There is a small example webservice included in the gem at lib/geocoder/rest.rb. It requires Sinatra to run as well as setting the GEOCODER_DB environment variable. To run it:
+
+  GEOCODER_DB=/path/to/geocoder/geocoder.db ruby /path/to/gem/geocoder/lib/geocoder/us/rest.rb
+
+You can then query the GeoCommons geocoder by calling the web service like:
+
+  http://localhost:9393/geocode.html?q=303+11th St NE,Washington,DC
+
 == Optional Options
 
 dbtype Geocoder::US::Database.new("/opt/tiger/geocoder.db", {:dbtype => 1})
