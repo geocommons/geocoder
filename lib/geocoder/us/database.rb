@@ -365,12 +365,12 @@ module Geocoder::US
       places = places_by_city city, address.city_parts, address.state if places.empty?
       return [] if places.empty?
 
+      # setting city will remove city from street, so save off before
       address.city = unique_values places, :city
       return places if address.street.empty?
-
+      
       zips = unique_values places, :zip
       street = address.street.sort {|a,b|a.length <=> b.length}[0]
-     # puts "street parts = #{address.street_parts.inspect}"
       candidates = features_by_street_and_zip street, address.street_parts, zips
 
       if candidates.empty?

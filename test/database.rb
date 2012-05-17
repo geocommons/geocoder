@@ -85,6 +85,8 @@ class TestDatabase < Test::Unit::TestCase
 
          def test_sample
            return if @db.nil?
+           # This test won't run properly on 1.8.7 or lower (?) - APS
+           return if RUBY_VERSION.split(".")[1] <= '8'
            CSV.foreach(Base + "/data/db-test.csv", {:headers=>true}) do |row|
              result = @db.geocode(row[0], true)
              result[0][:count] = result.map{|a|[a[:lat], a[:lon]]}.to_set.length

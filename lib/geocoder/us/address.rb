@@ -25,7 +25,7 @@ module Geocoder::US
     attr_accessor :zip, :plus4
    
     # Takes an address or place name string as its sole argument.
-    def initialize (text)
+    def initialize(text)
       raise ArgumentError, "no text provided" unless text and !text.empty?
       if text.class == Hash
         @text = ""
@@ -37,7 +37,7 @@ module Geocoder::US
     end
 
     # Removes any characters that aren't strictly part of an address string.
-    def clean (value)
+    def clean(value)
       value.strip \
            .gsub(/[^a-z0-9 ,'&@\/-]+/io, "") \
            .gsub(/\s+/o, " ")
@@ -45,7 +45,7 @@ module Geocoder::US
    
    
     def assign_text_to_address(text)
-      if !text[:address].nil?
+      if text[:address]
         @text = clean text[:address]
         parse
       else
@@ -73,7 +73,6 @@ module Geocoder::US
         @city = []
         if !text[:city].nil?
           @city.push(text[:city])
-          @text = text[:city].to_s
         else
           @city.push("")
         end
@@ -273,7 +272,10 @@ module Geocoder::US
       # Broome, MT or what)
       strings = expand_streets(strings) # fix for "Mountain View" -> "Mountain Vw"
       match = Regexp.new('\s*\b(?:' + strings.join("|") + ')\b\s*$', Regexp::IGNORECASE)
-      @street = @street.map {|string| string.gsub(match, '')}.select {|s|!s.empty?}
+      # only remove city from street strings if address was parsed
+      unless @text == ""
+        @street = @street.map {|string| string.gsub(match, '')}.select {|s|!s.empty?}
+      end
     end
 
     def po_box?
