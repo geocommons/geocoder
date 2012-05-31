@@ -8,7 +8,7 @@ require 'json'
 set :port, 8081
 get '/geocode.?:format?' do
   if params[:q]
-    results = @@db.geocode params[:q]
+    results = @@db.geocode params[:q].gsub(/\s+(and|at)\s+/i,' ')
     @features = []
     results.each do |result|
       coords = [result.delete(:lon), result.delete(:lat)]
