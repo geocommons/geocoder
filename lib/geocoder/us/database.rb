@@ -267,12 +267,12 @@ module Geocoder::US
               FROM range WHERE tlid IN (#{in_list})
               GROUP BY tlid, side;"
       execute(sql, *edge_ids).map {|r|
-        if r[:flipped] == "0"
-          r[:flipped] = false
-          r[:fromhn], r[:tohn] = r[:from0], r[:to0]
-        else
+	if r[:flipped].to_i == 1
           r[:flipped] = true
           r[:fromhn], r[:tohn] = r[:from1], r[:to1]
+        else
+          r[:flipped] = false
+          r[:fromhn], r[:tohn] = r[:from0], r[:to0]
         end
         [:from0, :to0, :from1, :to1].each {|k| r.delete k}
         r

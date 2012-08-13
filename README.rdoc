@@ -15,11 +15,6 @@ versus cardinal numbers, and more.
 Geocoder::US 2.0 is shipped with a free US ZIP code data set, compiled from
 public domain sources.
 
-== "excensus" Branch
-
-The "excensus" branch is the actively modified branch of Excensus LLC, maintained
-by Dan "Ducky" Little (GitHub: theduckylittle, dan.little-at-excensus-dot-com).
-
 == Synopsis
 
   >> require 'geocoder/us'
