@@ -56,13 +56,20 @@ To build Geocoder::US, you will need gcc/g++, make, bash or equivalent, the
 standard *NIX 'unzip' utility, and the SQLite 3 executable and development
 files installed on your system.
 
+This should work on Ubuntu LTE 12
+
+  sudo apt-get update
+  sudo apt-get install -y build-essential sqlite3 libsqlite3-dev flex bison unzip
+  gem install sqlite3
+
+  git clone https://github.com/geocommons/geocoder.git
+  cd geocoder
+  make
+  sudo make install
+
+
 To use the Ruby interface, you will need the 'Text' gem installed from
 rubyforge. To run the tests, you will also need the 'fastercsv' gem.
-
-Additionally, you will need a custom build of the 'sqlite3-ruby' gem that
-supports loading extension modules in SQLite. You can get a patched version of
-this gem from http://github.com/schuyler/sqlite3-ruby/. Until the sqlite3-ruby
-maintainers roll in the relevant patch, you will need *this* version.
 
 *NOTE*: If you do not have /usr/include/sqlite3ext.h installed, then your
 sqlite3 binaries are probably not configured to support dynamic extension
@@ -75,6 +82,9 @@ source-installed 'sqlite3' program is in your path before proceeding (and not
 the system-installed version), using `which sqlite3`. Also, be sure that you've
 added your source install prefix (usually /usr/local) to /etc/ld.so.conf (or
 its moral equivalent) and that you've run /sbin/ldconfig.
+
+
+
 
 == Thread safety
 
@@ -185,12 +195,12 @@ file, and then it renames the new database over top of the old.
 
 From within the source tree, you can run the following:
 
-  $ ruby tests/run.rb
+  $ ruby test/run.rb
 
 This tests the libraries, except for the database routines. If you have a
 database built, you can run the test harness like so:
 
-  $ ruby tests/run.rb /opt/tiger/geocoder.db
+  $ ruby test/run.rb /opt/tiger/geocoder.db
 
 The full test suite may take 30 or so seconds to run completely.
 
